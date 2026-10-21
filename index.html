@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>經費檢查工具｜前端原型</title>
+<style>
+  :root {
+    --bg: #f5f6f2;
+    --surface: #ffffff;
+    --surface-soft: #f8f9f6;
+    --text: #3f3935;
+    --muted: #7c7771;
+    --border: #e2e4dd;
+    --accent: #5f3e36;
+    --accent-soft: #eee6e1;
+    --error: #cc4125;
+    --warning: #e6a23c;
+    --shadow: 0 10px 30px rgba(43, 39, 33, .10);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Arial, "Noto Sans TC", sans-serif; }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+  .app-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 18px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand-mark { width:38px; height:38px; border-radius:11px; background:var(--accent); color:#fff; display:grid; place-items:center; font-size:18px; }
+  h1 { margin:0; font-size:19px; letter-spacing:.02em; }
+  .subtitle { margin-top:4px; font-size:12px; color:var(--muted); }
+  .header-actions { display:flex; align-items:center; gap:10px; }
+  .button { border:1px solid var(--border); border-radius:9px; padding:10px 15px; background:#fff; color:var(--text); font-weight:600; transition:.15s; }
+  .button:hover { border-color:#b7b9ae; }
+  .button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .button.primary:hover { background:#4d312b; }
+  .button.subtle { background:var(--surface-soft); }
+  .button.small { padding:7px 10px; font-size:13px; }
+  .main { padding:24px 28px 36px; max-width:1700px; margin:0 auto; }
+  .page-top { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:18px; }
+  .page-top h2 { margin:0; font-size:23px; }
+  .page-top p { margin:7px 0 0; color:var(--muted); font-size:13px; }
+  .tabs { display:flex; gap:5px; border-bottom:1px solid var(--border); margin-bottom:20px; }
+  .tab { background:transparent; border:0; color:var(--muted); padding:13px 18px; border-bottom:3px solid transparent; margin-bottom:-1px; font-weight:700; }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .workspace { display:flex; align-items:stretch; gap:0; min-height:600px; }
+  .main-pane { min-width:0; flex:1 1 auto; }
+  .content-scroll { min-width:0; }
+  .splitter { width:10px; flex:0 0 10px; cursor:col-resize; position:relative; margin:0 8px; display:none; }
+  .splitter::after { content:""; position:absolute; left:4px; top:0; bottom:0; width:2px; border-radius:2px; background:var(--border); }
+  .splitter:hover::after, .splitter.dragging::after { background:#9a8b80; }
+  .summary-pane { display:none; flex:0 0 370px; min-width:280px; max-width:65%; height:calc(100vh - 200px); min-height:420px; position:sticky; top:16px; align-self:flex-start; background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .summary-pane.visible { display:flex; flex-direction:column; }
+  .splitter.visible { display:block; }
+  .summary-header { padding:18px 18px 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .summary-header-line { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .summary-header h3 { margin:0; font-size:17px; }
+  .status-label { font-size:11px; padding:5px 8px; border-radius:20px; background:#f5eee6; color:#8b5d32; white-space:nowrap; }
+  .summary-scroll { overflow-y:auto; min-height:0; padding:14px; }
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:10px; }
+  .stat-card { padding:13px; border:1px solid var(--border); border-radius:10px; background:var(--surface-soft); }
+  .stat-label { font-size:12px; color:var(--muted); }
+  .stat-value { font-size:25px; font-weight:750; margin-top:6px; }
+  .stat-note { font-size:11px; color:var(--muted); margin-top:3px; }
+  .passed-card { border:1px solid var(--border); border-radius:10px; padding:12px 13px; margin-bottom:17px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .passed-card span { font-size:13px; }
+  .passed-card strong { font-size:17px; }
+  .section-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:17px 0 9px; font-size:13px; font-weight:800; }
+  .section-title small { color:var(--muted); font-weight:500; }
+  .issue-card { position:relative; border:1px solid var(--border); border-radius:10px; overflow:hidden; display:flex; margin-bottom:9px; background:#fff; }
+  .issue-stripe { width:5px; flex:0 0 5px; }
+  .issue-stripe.error { background:var(--error); }
+  .issue-stripe.warning { background:var(--warning); }
+  .issue-content { padding:12px 12px 13px; flex:1; min-width:0; }
+  .issue-title-line { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .issue-title { font-size:13px; font-weight:800; }
+  .issue-count { color:var(--muted); font-size:11px; white-space:nowrap; }
+  .issue-message { margin:8px 0 0; font-size:12px; line-height:1.55; color:#5d5752; }
+  .issue-link { margin-top:9px; padding:0; border:0; background:transparent; color:var(--accent); font-size:12px; font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+  .comparison-card { border:1px solid var(--border); border-radius:10px; padding:13px; margin-bottom:10px; }
+  .comparison-card h4 { margin:0 0 10px; font-size:13px; }
+  .comparison-row { display:flex; justify-content:space-between; gap:12px; font-size:12px; margin:7px 0; }
+  .comparison-row span:first-child { color:var(--muted); }
+  .comparison-row strong { text-align:right; }
+  .comparison-basis { background:var(--surface-soft); border-radius:7px; padding:9px; font-size:11px; line-height:1.55; color:#655e58; margin-top:10px; }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px; margin-bottom:18px; }
+  .panel-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:18px; }
+  .panel-heading h3 { margin:0; font-size:16px; }
+  .panel-heading p { margin:6px 0 0; color:var(--muted); font-size:12px; line-height:1.5; }
+  .section-tag { font-size:11px; color:var(--muted); background:var(--surface-soft); border:1px solid var(--border); padding:5px 8px; border-radius:7px; white-space:nowrap; }
+  .field-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:17px 20px; }
+  .field { min-width:0; }
+  .field.full { grid-column:1 / -1; }
+  .field label { display:block; font-size:13px; font-weight:700; margin-bottom:7px; }
+  .field input, .field select { width:100%; border:1px solid #d9dcd4; background:#fff; border-radius:8px; min-height:42px; padding:10px 12px; color:var(--text); outline:none; }
+  .field input:focus, .field select:focus { border-color:#9a8175; box-shadow:0 0 0 3px rgba(95,62,54,.09); }
+  .field input::placeholder { color:#aaa69f; }
+  .money-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; }
+  .helper { font-size:11px; color:var(--muted); margin-top:6px; }
+  .expense-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
+  .expense-toolbar h3 { margin:0; font-size:16px; }
+  .expense-toolbar p { margin:6px 0 0; color:var(--muted); font-size:12px; }
+  .table-wrap { overflow:auto; border:1px solid var(--border); border-radius:10px; background:#fff; }
+  table { border-collapse:collapse; width:100%; min-width:1000px; font-size:12px; }
+  th { background:#f4f5f0; color:#625c55; font-weight:800; text-align:left; padding:13px 12px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  td { padding:13px 12px; border-bottom:1px solid #eceee8; vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:0; }
+  tbody tr:hover { background:#fcfcfa; }
+  td.numeric, th.numeric { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .item-cell { min-width:190px; font-weight:700; }
+  .item-sub { color:var(--muted); font-weight:400; font-size:11px; margin-top:4px; }
+  .table-actions { white-space:nowrap; }
+  .text-button { border:0; background:transparent; color:var(--accent); font-size:12px; font-weight:700; padding:4px; }
+  .text-button.danger { color:var(--error); }
+  .empty-state { text-align:center; padding:42px 20px; color:var(--muted); }
+  .empty-icon { width:46px; height:46px; border:1px solid var(--border); background:var(--surface-soft); border-radius:14px; display:grid; place-items:center; margin:0 auto 12px; font-size:21px; }
+  .empty-state strong { display:block; color:var(--text); font-size:14px; margin-bottom:6px; }
+  .empty-state p { margin:0; font-size:12px; }
+  .table-footer { display:flex; justify-content:space-between; align-items:center; gap:12px; color:var(--muted); font-size:12px; padding:12px 2px 0; }
+  .modal-backdrop { position:fixed; inset:0; background:rgba(35,31,28,.42); display:none; align-items:center; justify-content:center; padding:22px; z-index:50; }
+  .modal-backdrop.open { display:flex; }
+  .modal { width:min(760px,100%); max-height:min(90vh,900px); overflow:auto; background:var(--surface); border-radius:16px; box-shadow:var(--shadow); }
+  .modal-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:22px 24px 18px; border-bottom:1px solid var(--border); }
+  .modal-header h3 { margin:0; font-size:18px; }
+  .modal-header p { margin:6px 0 0; color:var(--muted); font-size:12px; }
+  .icon-button { width:34px; height:34px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:18px; color:var(--muted); }
+  .modal-body { padding:22px 24px; }
+  .modal-footer { padding:16px 24px 22px; display:flex; justify-content:flex-end; gap:9px; border-top:1px solid var(--border); }
+  .modal .field-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .modal .field input, .modal .field select { min-height:44px; }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translate(-50%,20px); opacity:0; pointer-events:none; background:#3f3935; color:#fff; padding:11px 16px; border-radius:9px; box-shadow:var(--shadow); font-size:13px; transition:.2s; z-index:80; }
+  .toast.show { opacity:1; transform:translate(-50%,0); }
+  .demo-note { font-size:11px; color:var(--muted); margin-top:12px; }
+  .hidden { display:none !important; }
+  @media (max-width: 1050px) {
+    .main { padding:18px; }
+    .app-header { padding:16px 18px; }
+    .summary-pane { flex-basis:330px; }
+    .money-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media (max-width: 760px) {
+    .app-header { align-items:flex-start; flex-direction:column; }
+    .header-actions { width:100%; }
+    .header-actions .button { flex:1; }
+    .page-top { align-items:flex-start; flex-direction:column; }
+    .workspace { display:block; }
+    .summary-pane.visible { position:relative; top:auto; width:100%; max-width:none; height:460px; min-height:0; margin-top:16px; }
+    .splitter.visible { display:none; }
+    .field-grid, .modal .field-grid, .money-grid { grid-template-columns:1fr; }
+    .field.full { grid-column:auto; }
+    .panel { padding:17px; }
+    .modal-header, .modal-body { padding-left:18px; padding-right:18px; }
+    .modal-footer { padding:14px 18px 18px; }
+  }
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-mark">✓</div>
+    <div>
+      <h1>經費檢查工具</h1>
+      <div class="subtitle">前端介面原型・示意資料不代表實際檢查結果</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="button" id="resetDemoBtn" type="button">重設示意資料</button>
+    <button class="button primary" id="startCheckBtn" type="button">開始檢查</button>
+  </div>
+</header>
+
+<main class="main">
+  <div class="page-top">
+    <div>
+      <h2>資料輸入</h2>
+      <p>依照紙本申請書與經費表輸入資料，再查看檢查摘要。</p>
+    </div>
+    <div class="section-tag" id="editStatus">尚未檢查</div>
+  </div>
+
+  <nav class="tabs" aria-label="資料頁籤">
+    <button class="tab active" data-tab="application" type="button">申請書</button>
+    <button class="tab" data-tab="expenses" type="button">經費表 <span id="expenseTabCount"></span></button>
+  </nav>
+
+  <div class="workspace" id="workspace">
+    <section class="main-pane">
+      <div class="content-scroll">
+        <div id="applicationPage">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <h3>單位基本資料</h3>
+                <p>請依照申請書內容填寫。</p>
+              </div>
+              <span class="section-tag">基本資料</span>
+            </div>
+            <div class="field-grid">
+              <div class="field full">
+                <label for="unitName">單位全銜</label>
+                <input id="unitName" type="text" placeholder="請輸入單位全銜">
+              </div>
+              <div class="field">
+                <label for="qualification">資格類型</label>
+                <select id="qualification">
+                  <option value="">請選擇資格類型</option>
+                  <option>學校</option>
+                  <option>學校社團</option>
+                  <option>人民團體</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="leader">單位負責人</label>
+                <input id="leader" type="text" placeholder="請輸入姓名">
+              </div>
+              <div class="field">
+                <label for="registeredAddress">登記地址</label>
+                <input id="registeredAddress" type="text" placeholder="請輸入登記地址">
+              </div>
+              <div class="field">
+                <label for="mailingAddress">通訊地址</label>
+                <input id="mailingAddress" type="text" placeholder="請輸入通訊地址">
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <h3>申請補助經費</h3>
+                <p>金額欄位以數字輸入；此原型先呈現輸入介面。</p>
+              </div>
+              <span class="section-tag">金額資料</span>
+            </div>
+            <div class="money-grid">
+              <div class="field">
+                <label for="selfFund">自付經費</label>
+                <input id="selfFund" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+              </div>
+              <div class="field">
+                <label for="otherAgency">申請其他機關補助</label>
+                <input id="otherAgency" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+              </div>
+              <div class="field">
+                <label for="expectedFee">預計收費</label>
+                <input id="expectedFee" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+              </div>
+              <div class="field">
+                <label for="otherAmount">其他</label>
+                <input id="otherAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+              </div>
+              <div class="field">
+                <label for="guidelineGrant">申請本要點補助</label>
+                <input id="guidelineGrant" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+              </div>
+              <div class="field">
+                <label for="totalBudget">計畫總經費</label>
+                <input id="totalBudget" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+              </div>
+            </div>
+            <p class="demo-note">提示：欄位名稱與分組依據你提供的申請書範本；目前不執行任何金額檢查。</p>
+          </section>
+        </div>
+
+        <div id="expensesPage" class="hidden">
+          <section class="panel">
+            <div class="expense-toolbar">
+              <div>
+                <h3>經費清單</h3>
+                <p>逐筆新增經費；加入後會顯示在下方表格。</p>
+              </div>
+              <button class="button primary" id="openAddModalBtn" type="button">＋ 新增經費</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>項目</th>
+                    <th class="numeric">單價</th>
+                    <th class="numeric">數量</th>
+                    <th class="numeric">預算金額</th>
+                    <th class="numeric">本要點補助金額</th>
+                    <th class="numeric">他機關補助金額</th>
+                    <th class="numeric">自付經費</th>
+                    <th class="numeric">其他</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="expenseTableBody"></tbody>
+              </table>
+              <div id="expenseEmpty" class="empty-state">
+                <div class="empty-icon">＋</div>
+                <strong>目前尚未新增經費</strong>
+                <p>點擊右上方「新增經費」，輸入一筆資料後加入清單。</p>
+              </div>
+            </div>
+            <div class="table-footer">
+              <span id="expenseCountLabel">共 0 筆經費</span>
+              <span>表格可左右捲動查看完整欄位</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <div class="splitter" id="splitter" role="separator" aria-label="拖曳調整摘要寬度" aria-orientation="vertical"></div>
+
+    <aside class="summary-pane" id="summaryPane" aria-label="檢查摘要">
+      <div class="summary-header">
+        <div class="summary-header-line">
+          <h3>檢查摘要</h3>
+          <span class="status-label" id="summaryStatus">示意結果</span>
+        </div>
+      </div>
+      <div class="summary-scroll">
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-label">問題總數</div>
+            <div class="stat-value" id="issueTotal">3</div>
+            <div class="stat-note">錯誤與警告合計</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">受影響經費筆數</div>
+            <div class="stat-value" id="affectedCount">2</div>
+            <div class="stat-note">不重複計算經費筆數</div>
+          </div>
+        </div>
+        <div class="passed-card">
+          <span>通過檢查的項目</span>
+          <strong id="passedCount">—</strong>
+        </div>
+
+        <div class="section-title">錯誤 <small>紅色色帶</small></div>
+        <div id="errorList">
+          <article class="issue-card">
+            <div class="issue-stripe error"></div>
+            <div class="issue-content">
+              <div class="issue-title-line">
+                <span class="issue-title">場地費</span>
+                <span class="issue-count">2 項問題</span>
+              </div>
+              <p class="issue-message">單價 × 數量與預算金額不一致。</p>
+              <p class="issue-message">經費來源合計與預算金額不一致。</p>
+              <button class="issue-link" data-goto="expenses" type="button">前往經費表</button>
+            </div>
+          </article>
+        </div>
+
+        <div class="section-title">警告 <small>橘黃色色帶</small></div>
+        <div id="warningList">
+          <article class="issue-card">
+            <div class="issue-stripe warning"></div>
+            <div class="issue-content">
+              <div class="issue-title-line">
+                <span class="issue-title">交通費</span>
+                <span class="issue-count">1 項問題</span>
+              </div>
+              <p class="issue-message">此筆資料有需要人工留意的內容。</p>
+              <button class="issue-link" data-goto="expenses" type="button">前往經費表</button>
+            </div>
+          </article>
+        </div>
+
+        <div class="section-title">跨頁金額比對</div>
+        <div class="comparison-card">
+          <h4>申請書與經費表</h4>
+          <div class="comparison-row"><span>申請書金額</span><strong>—</strong></div>
+          <div class="comparison-row"><span>經費表金額</span><strong>—</strong></div>
+          <div class="comparison-row"><span>差額</span><strong>—</strong></div>
+          <div class="comparison-basis">計算依據會在此說明。本區目前僅為版面示意，未連結實際計算。</div>
+        </div>
+        <p class="demo-note">此側欄使用示意內容，不能作為實際案件的檢查依據。</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="expenseModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="expenseModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3 id="expenseModalTitle">新增經費</h3>
+        <p>請依照經費表逐欄輸入，完成後加入清單。</p>
+      </div>
+      <button class="icon-button" id="closeModalX" type="button" aria-label="關閉">×</button>
+    </div>
+    <form id="expenseForm">
+      <div class="modal-body">
+        <div class="field-grid">
+          <div class="field full">
+            <label for="expenseItem">項目</label>
+            <select id="expenseItem" required>
+              <option value="">請選擇經費項目</option>
+              <option>場地費</option>
+              <option>場地布置費</option>
+              <option>設備使用或租借費</option>
+              <option>書籍資料及文宣品印刷費</option>
+              <option>鐘點費</option>
+              <option>出席費</option>
+              <option>裁判費</option>
+              <option>租車費</option>
+              <option>交通費</option>
+              <option>住宿費</option>
+              <option>報名費</option>
+              <option>保險費</option>
+              <option>非經費編列基準表所編之經費</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="unitPrice">單價</label>
+            <input id="unitPrice" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入單價">
+          </div>
+          <div class="field">
+            <label for="quantity">數量</label>
+            <input id="quantity" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入數量">
+          </div>
+          <div class="field">
+            <label for="budgetAmount">預算金額</label>
+            <input id="budgetAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入預算金額">
+          </div>
+          <div class="field">
+            <label for="grantAmount">本要點補助金額</label>
+            <input id="grantAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入金額">
+          </div>
+          <div class="field">
+            <label for="agencyAmount">他機關補助金額</label>
+            <input id="agencyAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入金額">
+          </div>
+          <div class="field">
+            <label for="expenseSelfFund">自付經費</label>
+            <input id="expenseSelfFund" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入金額">
+          </div>
+          <div class="field">
+            <label for="expenseOther">其他</label>
+            <input id="expenseOther" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入金額">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="button" id="cancelModalBtn" type="button">取消</button>
+        <button class="button primary" type="submit">加入經費清單</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const expenseRows = [];
+  let nextId = 1;
+  let checkedOnce = false;
+  let isStale = false;
+  let summaryWidth = 370;
+  let toastTimer;
+
+  const moneyFields = ["selfFund", "otherAgency", "expectedFee", "otherAmount", "guidelineGrant", "totalBudget"];
+  const expenseFields = [
+    ["expenseItem", "item"],
+    ["unitPrice", "unitPrice"],
+    ["quantity", "quantity"],
+    ["budgetAmount", "budget"],
+    ["grantAmount", "grant"],
+    ["agencyAmount", "agency"],
+    ["expenseSelfFund", "self"],
+    ["expenseOther", "other"]
+  ];
+  const fmt = (value) => {
+    if (value === "" || value === null || value === undefined || Number.isNaN(Number(value))) return "—";
+    return Number(value).toLocaleString("zh-TW", { maximumFractionDigits: 2 });
+  };
+  function showToast(message) {
+    $("toast").textContent = message;
+    $("toast").classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $("toast").classList.remove("show"), 2400);
+  }
+  function markEdited() {
+    if (!checkedOnce) {
+      $("editStatus").textContent = "尚未檢查";
+      return;
+    }
+    isStale = true;
+    $("editStatus").textContent = "資料已修改，請重新檢查";
+    $("summaryStatus").textContent = "結果已過期";
+  }
+  function switchTab(tab) {
+    document.querySelectorAll(".tab").forEach(button => {
+      const active = button.dataset.tab === tab;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    $("applicationPage").classList.toggle("hidden", tab !== "application");
+    $("expensesPage").classList.toggle("hidden", tab !== "expenses");
+  }
+  document.querySelectorAll(".tab").forEach(button => button.addEventListener("click", () => switchTab(button.dataset.tab)));
+
+  function openModal() {
+    $("expenseModalBackdrop").classList.add("open");
+    document.body.style.overflow = "hidden";
+    setTimeout(() => $("expenseItem").focus(), 30);
+  }
+  function closeModal() {
+    $("expenseModalBackdrop").classList.remove("open");
+    document.body.style.overflow = "";
+  }
+  $("openAddModalBtn").addEventListener("click", openModal);
+  $("closeModalX").addEventListener("click", closeModal);
+  $("cancelModalBtn").addEventListener("click", closeModal);
+  $("expenseModalBackdrop").addEventListener("click", (event) => {
+    if (event.target === $("expenseModalBackdrop")) closeModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && $("expenseModalBackdrop").classList.contains("open")) closeModal();
+  });
+
+  // 金額／數量欄位：即時加入千分位逗號，內部運算前再移除逗號。
+  function rawNumericValue(value) {
+    return String(value ?? "").replace(/,/g, "").replace(/[^\d.-]/g, "");
+  }
+  function formatThousands(value) {
+    const raw = rawNumericValue(value);
+    if (raw === "" || raw === "-" || raw === "." || raw === "-.") return raw;
+    const negative = raw.startsWith("-");
+    const unsigned = negative ? raw.slice(1) : raw;
+    const parts = unsigned.split(".");
+    const integerPart = (parts[0] || "").replace(/^0+(?=\d)/, "");
+    const grouped = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const decimalPart = parts.length > 1 ? "." + parts.slice(1).join("") : "";
+    return (negative ? "-" : "") + grouped + decimalPart;
+  }
+  
+function attachThousandsFormatting(field) {
+    let isComposing = false;
+
+    // 進入欄位時移除逗號，方便編輯。
+    field.addEventListener("focus", () => {
+        field.value = rawNumericValue(field.value);
+    });
+
+    // 開始輸入法組字。
+    field.addEventListener("compositionstart", () => {
+        isComposing = true;
+    });
+
+    // 組字期間不格式化，避免干擾輸入。
+    field.addEventListener("input", (event) => {
+        if (
+            isComposing ||
+            event.isComposing ||
+            event.inputType === "insertCompositionText"
+        ) {
+            return;
+        }
+
+        formatFieldValue(field);
+    });
+
+    // 組字結束後，再格式化欄位。
+    field.addEventListener("compositionend", () => {
+        isComposing = false;
+
+        // 等瀏覽器完成最後一次輸入，再處理格式。
+        setTimeout(() => {
+            formatFieldValue(field);
+        }, 0);
+    });
+
+    // 離開欄位時，確保顯示千分位逗號。
+    field.addEventListener("blur", () => {
+        formatFieldValue(field);
+    });
+}
+
+function formatFieldValue(field) {
+    const start = field.selectionStart ?? field.value.length;
+
+    // 計算游標前有幾個數字。
+    const digitsBeforeCursor = rawNumericValue(
+        field.value.slice(0, start)
+    ).replace(/[^\d]/g, "").length;
+
+    const formatted = formatThousands(field.value);
+    field.value = formatted;
+
+    // 依照數字數量還原游標位置。
+    let position = 0;
+    let counted = 0;
+
+    while (position < formatted.length && counted < digitsBeforeCursor) {
+        if (/\d/.test(formatted[position])) {
+            counted++;
+        }
+        position++;
+    }
+
+    field.setSelectionRange(position, position);
+}
+
+  function numericValue(value) {
+    const raw = String(value ?? "").replace(/,/g, "").trim();
+    return raw === "" ? "" : Number(raw);
+  }
+
+  function renderExpenses() {
+    const tbody = $("expenseTableBody");
+    tbody.innerHTML = "";
+    $("expenseEmpty").style.display = expenseRows.length ? "none" : "block";
+    $("expenseCountLabel").textContent = `共 ${expenseRows.length} 筆經費`;
+    $("expenseTabCount").textContent = expenseRows.length ? `（${expenseRows.length}）` : "";
+    expenseRows.forEach((row) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="item-cell">${escapeHTML(row.item)}<div class="item-sub">經費項目</div></td>
+        <td class="numeric">${fmt(row.unitPrice)}</td>
+        <td class="numeric">${fmt(row.quantity)}</td>
+        <td class="numeric">${fmt(row.budget)}</td>
+        <td class="numeric">${fmt(row.grant)}</td>
+        <td class="numeric">${fmt(row.agency)}</td>
+        <td class="numeric">${fmt(row.self)}</td>
+        <td class="numeric">${fmt(row.other)}</td>
+        <td class="table-actions"><button class="text-button" data-edit="${row.id}" type="button">編輯</button><button class="text-button danger" data-delete="${row.id}" type="button">刪除</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll("[data-delete]").forEach(button => button.addEventListener("click", () => {
+      const index = expenseRows.findIndex(row => row.id === Number(button.dataset.delete));
+      if (index >= 0) {
+        expenseRows.splice(index, 1);
+        renderExpenses();
+        markEdited();
+        showToast("已刪除經費資料");
+      }
+    }));
+    tbody.querySelectorAll("[data-edit]").forEach(button => button.addEventListener("click", () => {
+      const row = expenseRows.find(item => item.id === Number(button.dataset.edit));
+      if (!row) return;
+      expenseFields.forEach(([fieldId, key]) => $(fieldId).value = row[key] ?? "");
+      $("expenseForm").dataset.editingId = String(row.id);
+      $("expenseModalTitle").textContent = "編輯經費";
+      $("expenseForm").querySelector('[type="submit"]').textContent = "儲存修改";
+      openModal();
+    }));
+  }
+  function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    })[char]);
+  }
+  $("expenseForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const item = $("expenseItem").value;
+    if (!item) {
+      $("expenseItem").focus();
+      return;
+    }
+    const row = { id: Number($("expenseForm").dataset.editingId) || nextId++ };
+    expenseFields.forEach(([fieldId, key]) => {
+      const value = $(fieldId).value;
+      row[key] = key === "item" ? value : numericValue(value);
+    });
+    const editingId = Number($("expenseForm").dataset.editingId);
+    if (editingId) {
+      const index = expenseRows.findIndex(item => item.id === editingId);
+      if (index >= 0) expenseRows[index] = row;
+    } else {
+      expenseRows.push(row);
+    }
+    delete $("expenseForm").dataset.editingId;
+    $("expenseForm").reset();
+    $("expenseModalTitle").textContent = "新增經費";
+    $("expenseForm").querySelector('[type="submit"]').textContent = "加入經費清單";
+    closeModal();
+    renderExpenses();
+    markEdited();
+    showToast(editingId ? "已更新經費資料" : "已加入經費清單");
+  });
+
+  [...moneyFields.map(id => $(id)), $("unitName"), $("qualification"), $("leader"), $("registeredAddress"), $("mailingAddress")].forEach(field => {
+    field.addEventListener("input", markEdited);
+    field.addEventListener("change", markEdited);
+  });
+
+  $("startCheckBtn").addEventListener("click", () => {
+    checkedOnce = true;
+    isStale = false;
+    $("summaryPane").classList.add("visible");
+    $("splitter").classList.add("visible");
+    $("editStatus").textContent = "已產生示意摘要";
+    $("summaryStatus").textContent = "示意結果";
+    $("workspace").style.setProperty("--summary-width", summaryWidth + "px");
+    $("summaryPane").style.flexBasis = summaryWidth + "px";
+    showToast("已顯示側邊摘要（示意資料，尚未執行檢查）");
+  });
+
+  document.querySelectorAll("[data-goto]").forEach(button => button.addEventListener("click", () => {
+    switchTab(button.dataset.goto);
+    showToast("已切換至經費表；目前為示意問題，未連結特定資料列");
+  }));
+
+  const splitter = $("splitter");
+  let dragging = false;
+  splitter.addEventListener("pointerdown", (event) => {
+    if (!$("summaryPane").classList.contains("visible")) return;
+    dragging = true;
+    splitter.classList.add("dragging");
+    splitter.setPointerCapture(event.pointerId);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  });
+  splitter.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    const workspaceRect = $("workspace").getBoundingClientRect();
+    const desired = workspaceRect.right - event.clientX - 10;
+    summaryWidth = Math.max(280, Math.min(Math.round(desired), Math.min(650, workspaceRect.width * .62)));
+    $("summaryPane").style.flexBasis = summaryWidth + "px";
+  });
+  function stopDrag() {
+    dragging = false;
+    splitter.classList.remove("dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  }
+  splitter.addEventListener("pointerup", stopDrag);
+  splitter.addEventListener("pointercancel", stopDrag);
+  splitter.addEventListener("lostpointercapture", stopDrag);
+
+  $("resetDemoBtn").addEventListener("click", () => {
+    if (!confirm("要清除目前輸入的資料並重設此原型嗎？")) return;
+    document.querySelectorAll("#applicationPage input").forEach(input => input.value = "");
+    $("qualification").value = "";
+    expenseRows.splice(0, expenseRows.length);
+    nextId = 1;
+    checkedOnce = false;
+    isStale = false;
+    $("summaryPane").classList.remove("visible");
+    $("splitter").classList.remove("visible");
+    $("editStatus").textContent = "尚未檢查";
+    $("expenseForm").reset();
+    delete $("expenseForm").dataset.editingId;
+    $("expenseModalTitle").textContent = "新增經費";
+    $("expenseForm").querySelector('[type="submit"]').textContent = "加入經費清單";
+    renderExpenses();
+    switchTab("application");
+    showToast("已重設示意資料");
+  });
+
+  // 所有金額欄位與經費表中的數字欄位都使用千分位顯示。
+  document.querySelectorAll(
+    '#applicationPage input[type="text"][inputmode="numeric"], ' +
+    '#expenseForm input[inputmode="numeric"], #expenseForm input[inputmode="decimal"]'
+  ).forEach(attachThousandsFormatting);
+
+  renderExpenses();
+})();
+</script>
+</body>
+</html>
