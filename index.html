@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>經費檢查工具｜前端原型</title>
+<link rel="stylesheet" href="./css/style.css">
+
+</head>
+<body>
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-mark">✓</div>
+    <div>
+      <h1>經費檢查工具</h1>
+      <div class="subtitle">前端介面原型・示意資料不代表實際檢查結果</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="button" id="resetDemoBtn" type="button">重設示意資料</button>
+    <button class="button primary" id="startCheckBtn" type="button">開始檢查</button>
+  </div>
+</header>
+
+<main class="main">
+  <div class="page-top">
+    <div>
+      <h2>資料輸入</h2>
+      <p>依照紙本申請書與經費表輸入資料，再查看檢查摘要。</p>
+    </div>
+    <div class="section-tag" id="editStatus">尚未檢查</div>
+  </div>
+
+  <nav class="tabs" aria-label="資料頁籤">
+    <button class="tab active" data-tab="application" type="button">申請書</button>
+    <button class="tab" data-tab="expenses" type="button">經費表 <span id="expenseTabCount"></span></button>
+  </nav>
+
+  <div class="workspace" id="workspace">
+    <section class="main-pane">
+      <div class="content-scroll">
+        <div id="applicationPage">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <h3>單位基本資料</h3>
+                <p>請依照申請書內容填寫。</p>
+              </div>
+              <span class="section-tag">基本資料</span>
+            </div>
+            <div class="field-grid">
+              <div class="field full">
+                <label for="unitName">單位全銜</label>
+                <input id="unitName" type="text" placeholder="請輸入單位全銜">
+              </div>
+              <div class="field">
+                <label for="qualification">資格類型</label>
+                <select id="qualification">
+                  <option value="">請選擇資格類型</option>
+                  <option>學校</option>
+                  <option>學校社團</option>
+                  <option>人民團體</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="leader">單位負責人</label>
+                <input id="leader" type="text" placeholder="請輸入姓名">
+              </div>
+              <div class="field">
+                <label for="registeredAddress">登記地址</label>
+                <input id="registeredAddress" type="text" placeholder="請輸入登記地址">
+              </div>
+              <div class="field">
+                <label for="mailingAddress">通訊地址</label>
+                <input id="mailingAddress" type="text" placeholder="請輸入通訊地址">
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <h3>申請補助經費</h3>
+                <p>金額欄位以數字輸入；此原型先呈現輸入介面。</p>
+              </div>
+              <span class="section-tag">金額資料</span>
+            </div>
+            <div class="funding-layout">
+              <div class="funding-primary">
+                <div class="field">
+                  <label for="totalBudget">計畫總經費</label>
+                  <input id="totalBudget" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                  <p class="helper">金額應等於申請本要點補助經費＋自籌款。</p>
+                </div>
+                <div class="field">
+                  <label for="guidelineGrant">申請【本要點】補助經費</label>
+                  <input id="guidelineGrant" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                </div>
+              </div>
+              <section class="funding-self">
+                <div class="funding-self-heading">
+                  <h4>自籌款</h4>
+                  <span class="section-tag">4 個項目</span>
+                </div>
+                <div class="funding-self-grid">
+                  <div class="field">
+                    <label for="selfFund">自付經費</label>
+                    <input id="selfFund" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                  </div>
+                  <div class="field">
+                    <label for="otherAgency">申請【其他政府機關】補助經費</label>
+                    <input id="otherAgency" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                  </div>
+                  <div class="field">
+                    <label for="expectedFee">預計收費金額</label>
+                    <input id="expectedFee" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                  </div>
+                  <div class="field">
+                    <label for="otherAmount">其他</label>
+                    <input id="otherAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                  </div>
+                </div>
+              </section>
+            </div>
+            <p class="demo-note">提示：欄位名稱與分組依據你提供的申請書範本；目前不執行任何金額檢查。</p>
+          </section>
+        </div>
+
+        <div id="expensesPage" class="hidden">
+          <section class="panel">
+            <div class="expense-toolbar">
+              <div>
+                <h3>經費清單</h3>
+                <p>逐筆新增經費；加入後會顯示在下方表格。</p>
+              </div>
+              <button class="button primary" id="openAddModalBtn" type="button">＋ 新增經費</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>項目</th>
+                    <th class="numeric">單價</th>
+                    <th class="numeric">數量</th>
+                    <th class="numeric">預算金額</th>
+                    <th class="numeric">本要點補助金額</th>
+                    <th class="numeric">他機關補助金額</th>
+                    <th class="numeric">自付經費</th>
+                    <th class="numeric">其他</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="expenseTableBody"></tbody>
+              </table>
+              <div id="expenseEmpty" class="empty-state">
+                <div class="empty-icon">＋</div>
+                <strong>目前尚未新增經費</strong>
+                <p>點擊右上方「新增經費」，輸入一筆資料後加入清單。</p>
+              </div>
+            </div>
+            <div class="table-footer">
+              <span id="expenseCountLabel">共 0 筆經費</span>
+              <span>表格可左右捲動查看完整欄位</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <div class="splitter" id="splitter" role="separator" aria-label="拖曳調整摘要寬度" aria-orientation="vertical"></div>
+
+    <aside class="summary-pane" id="summaryPane" aria-label="檢查摘要">
+      <div class="summary-header">
+        <div class="summary-header-line">
+          <h3>檢查摘要</h3>
+          <span class="status-label" id="summaryStatus">示意結果</span>
+        </div>
+      </div>
+      <div class="summary-scroll">
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-label">問題總數</div>
+            <div class="stat-value" id="issueTotal">3</div>
+            <div class="stat-note">錯誤與警告合計</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">受影響經費筆數</div>
+            <div class="stat-value" id="affectedCount">2</div>
+            <div class="stat-note">不重複計算經費筆數</div>
+          </div>
+        </div>
+        <div class="passed-card">
+          <span>通過檢查的項目</span>
+          <strong id="passedCount">—</strong>
+        </div>
+
+        <div class="section-title">錯誤 <small>紅色色帶</small></div>
+        <div id="errorList">
+          <article class="issue-card">
+            <div class="issue-stripe error"></div>
+            <div class="issue-content">
+              <div class="issue-title-line">
+                <span class="issue-title">場地費</span>
+                <span class="issue-count">2 項問題</span>
+              </div>
+              <p class="issue-message">單價 × 數量與預算金額不一致。</p>
+              <p class="issue-message">經費來源合計與預算金額不一致。</p>
+              <button class="issue-link" data-goto="expenses" type="button">前往經費表</button>
+            </div>
+          </article>
+        </div>
+
+        <div class="section-title">警告 <small>橘黃色色帶</small></div>
+        <div id="warningList">
+          <article class="issue-card">
+            <div class="issue-stripe warning"></div>
+            <div class="issue-content">
+              <div class="issue-title-line">
+                <span class="issue-title">交通費</span>
+                <span class="issue-count">1 項問題</span>
+              </div>
+              <p class="issue-message">此筆資料有需要人工留意的內容。</p>
+              <button class="issue-link" data-goto="expenses" type="button">前往經費表</button>
+            </div>
+          </article>
+        </div>
+
+        <div class="section-title">跨頁金額比對</div>
+        <div class="comparison-card">
+          <h4>申請書與經費表</h4>
+          <div class="comparison-row"><span>申請書金額</span><strong>—</strong></div>
+          <div class="comparison-row"><span>經費表金額</span><strong>—</strong></div>
+          <div class="comparison-row"><span>差額</span><strong>—</strong></div>
+          <div class="comparison-basis">計算依據會在此說明。本區目前僅為版面示意，未連結實際計算。</div>
+        </div>
+        <p class="demo-note">此側欄使用示意內容，不能作為實際案件的檢查依據。</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="expenseModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="expenseModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3 id="expenseModalTitle">新增經費</h3>
+        <p>請依照經費表逐欄輸入，完成後加入清單。</p>
+      </div>
+      <button class="icon-button" id="closeModalX" type="button" aria-label="關閉">×</button>
+    </div>
+    <form id="expenseForm">
+      <div class="modal-body">
+        <div class="field-grid">
+          <div class="field full">
+            <label for="expenseItem">項目</label>
+            <select id="expenseItem" required>
+              <option value="">請選擇經費項目</option>
+              <option>場地費</option>
+              <option>場地布置費</option>
+              <option>設備使用或租借費</option>
+              <option>書籍資料及文宣品印刷費</option>
+              <option>鐘點費</option>
+              <option>出席費</option>
+              <option>裁判費</option>
+              <option>租車費</option>
+              <option>交通費</option>
+              <option>住宿費</option>
+              <option>報名費</option>
+              <option>保險費</option>
+              <option>非經費編列基準表所編之經費</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="unitPrice">單價</label>
+            <input id="unitPrice" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入單價">
+          </div>
+          <div class="field">
+            <label for="quantity">數量</label>
+            <input id="quantity" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入數量">
+          </div>
+          <div class="field">
+            <label for="budgetAmount">預算金額</label>
+            <input id="budgetAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入預算金額">
+          </div>
+          <div class="field">
+            <label for="grantAmount">本要點補助金額</label>
+            <input id="grantAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入金額">
+          </div>
+          <div class="field">
+            <label for="agencyAmount">他機關補助金額</label>
+            <input id="agencyAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入金額">
+          </div>
+          <div class="field">
+            <label for="expenseSelfFund">自付經費</label>
+            <input id="expenseSelfFund" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入金額">
+          </div>
+          <div class="field">
+            <label for="expenseOther">其他</label>
+            <input id="expenseOther" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入金額">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="button" id="cancelModalBtn" type="button">取消</button>
+        <button class="button primary" type="submit">加入經費清單</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="./js/script.js"></script>
+</body>
+</html>
