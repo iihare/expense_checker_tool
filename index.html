@@ -93,8 +93,14 @@
   .field input, .field select { width:100%; border:1px solid #d9dcd4; background:#fff; border-radius:8px; min-height:42px; padding:10px 12px; color:var(--text); outline:none; }
   .field input:focus, .field select:focus { border-color:#9a8175; box-shadow:0 0 0 3px rgba(95,62,54,.09); }
   .field input::placeholder { color:#aaa69f; }
-  .money-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; }
-  .helper { font-size:11px; color:var(--muted); margin-top:6px; }
+  .funding-layout { display:grid; grid-template-columns:minmax(220px,0.82fr) minmax(0,1.45fr); gap:18px; align-items:stretch; }
+  .funding-primary { display:flex; flex-direction:column; gap:18px; }
+  .funding-primary .field { padding:15px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+  .funding-self { min-width:0; border:1px solid var(--border); border-radius:10px; padding:16px; background:#fafbf8; }
+  .funding-self-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; }
+  .funding-self-heading h4 { margin:0; font-size:15px; }
+  .funding-self-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:17px 15px; }
+  .helper { font-size:11px; color:var(--muted); margin-top:6px; line-height:1.5; }
   .expense-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
   .expense-toolbar h3 { margin:0; font-size:16px; }
   .expense-toolbar p { margin:6px 0 0; color:var(--muted); font-size:12px; }
@@ -134,7 +140,8 @@
     .main { padding:18px; }
     .app-header { padding:16px 18px; }
     .summary-pane { flex-basis:330px; }
-    .money-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .funding-layout { grid-template-columns:minmax(190px,0.8fr) minmax(0,1.2fr); gap:14px; }
+    .funding-self-grid { grid-template-columns:1fr; }
   }
   @media (max-width: 760px) {
     .app-header { align-items:flex-start; flex-direction:column; }
@@ -144,7 +151,10 @@
     .workspace { display:block; }
     .summary-pane.visible { position:relative; top:auto; width:100%; max-width:none; height:460px; min-height:0; margin-top:16px; }
     .splitter.visible { display:none; }
-    .field-grid, .modal .field-grid, .money-grid { grid-template-columns:1fr; }
+    .field-grid, .modal .field-grid { grid-template-columns:1fr; }
+    .funding-layout { grid-template-columns:1fr; }
+    .funding-self-grid { grid-template-columns:1fr; }
+    .funding-primary { gap:12px; }
     .field.full { grid-column:auto; }
     .panel { padding:17px; }
     .modal-header, .modal-body { padding-left:18px; padding-right:18px; }
@@ -230,31 +240,42 @@
               </div>
               <span class="section-tag">金額資料</span>
             </div>
-            <div class="money-grid">
-              <div class="field">
-                <label for="selfFund">自付經費</label>
-                <input id="selfFund" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+            <div class="funding-layout">
+              <div class="funding-primary">
+                <div class="field">
+                  <label for="totalBudget">計畫總經費</label>
+                  <input id="totalBudget" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                  <p class="helper">金額應等於申請本要點補助經費＋自籌款。</p>
+                </div>
+                <div class="field">
+                  <label for="guidelineGrant">申請【本要點】補助經費</label>
+                  <input id="guidelineGrant" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                </div>
               </div>
-              <div class="field">
-                <label for="otherAgency">申請其他機關補助</label>
-                <input id="otherAgency" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
-              </div>
-              <div class="field">
-                <label for="expectedFee">預計收費</label>
-                <input id="expectedFee" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
-              </div>
-              <div class="field">
-                <label for="otherAmount">其他</label>
-                <input id="otherAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
-              </div>
-              <div class="field">
-                <label for="guidelineGrant">申請本要點補助</label>
-                <input id="guidelineGrant" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
-              </div>
-              <div class="field">
-                <label for="totalBudget">計畫總經費</label>
-                <input id="totalBudget" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
-              </div>
+              <section class="funding-self">
+                <div class="funding-self-heading">
+                  <h4>自籌款</h4>
+                  <span class="section-tag">4 個項目</span>
+                </div>
+                <div class="funding-self-grid">
+                  <div class="field">
+                    <label for="selfFund">自付經費</label>
+                    <input id="selfFund" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                  </div>
+                  <div class="field">
+                    <label for="otherAgency">申請【其他政府機關】補助經費</label>
+                    <input id="otherAgency" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                  </div>
+                  <div class="field">
+                    <label for="expectedFee">預計收費金額</label>
+                    <input id="expectedFee" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                  </div>
+                  <div class="field">
+                    <label for="otherAmount">其他</label>
+                    <input id="otherAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                  </div>
+                </div>
+              </section>
             </div>
             <p class="demo-note">提示：欄位名稱與分組依據你提供的申請書範本；目前不執行任何金額檢查。</p>
           </section>
