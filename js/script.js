@@ -58,6 +58,7 @@
     document.body.style.overflow = "";
   }
   $("openAddModalBtn").addEventListener("click", openModal);
+  $("openAddModalIcon").addEventListener("click", openModal);
   $("closeModalX").addEventListener("click", closeModal);
   $("cancelModalBtn").addEventListener("click", closeModal);
   $("expenseModalBackdrop").addEventListener("click", (event) => {
