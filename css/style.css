@@ -119,18 +119,6 @@
   display: grid;
   place-items: center;
   margin: 0 auto 12px;
-}
-
-/* 讓裡面的按鈕填滿 div */
-.empty-icon.button button {
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: transparent;
-  border-radius: inherit;
-  display: grid;
-  place-items: center;
-  font-size: 21px;
   cursor: pointer;
 }
   .empty-state strong { display:block; color:var(--text); font-size:14px; margin-bottom:6px; }
