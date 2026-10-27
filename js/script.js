@@ -306,4 +306,9 @@ function formatFieldValue(field) {
   ).forEach(attachThousandsFormatting);
 
   renderExpenses();
+
+  // 提供經費清單的唯讀副本給其他腳本
+  window.getExpenseRows = function () {
+    return expenseRows.map(row => ({ ...row }));
+  };
 })();
