@@ -152,4 +152,8 @@
     .panel { padding:17px; }
     .modal-header, .modal-body { padding-left:18px; padding-right:18px; }
     .modal-footer { padding:14px 18px 18px; }
+    #startCheckBtn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
   }
