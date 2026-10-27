@@ -247,34 +247,7 @@ function formatFieldValue(field) {
     showToast("已顯示側邊摘要（示意資料，尚未執行檢查）");
   });
 */
-  $("startCheckBtn").addEventListener("click", async () => {
-  // 1. 收集 HTML 表單資料，更新 appState
-  collectAllData();
-
-  // 2. 執行人民團體名稱及地址檢查
-  const associationResult = await checkAssociationData();
-
-  // 3. 顯示檢查摘要（暫時保留原本的示意 UI）
-  checkedOnce = true;
-  isStale = false;
-
-  $("summaryPane").classList.add("visible");
-  $("splitter").classList.add("visible");
-
-  $("editStatus").textContent = "已完成資料檢查";
-  $("summaryStatus").textContent = "檢查完成";
-
-  $("workspace").style.setProperty(
-    "--summary-width",
-    summaryWidth + "px"
-  );
-
-  $("summaryPane").style.flexBasis = summaryWidth + "px";
-
-  console.log("人民團體檢查結果：", associationResult);
-
-  showToast("已完成人民團體資料檢查");
-});
+  document.getElementById("startCheckBtn").addEventListener("click", startCheck);
 
   document.querySelectorAll("[data-goto]").forEach(button => button.addEventListener("click", () => {
     switchTab(button.dataset.goto);
@@ -335,6 +308,45 @@ function formatFieldValue(field) {
   ).forEach(attachThousandsFormatting);
 
   renderExpenses();
+
+  
+async function startCheck() {
+  const button = document.getElementById("startCheckBtn");
+
+  // 防止重複執行
+  if (button.disabled) return;
+
+  const originalText = button.textContent;
+
+  // 顯示檢查中狀態
+  button.disabled = true;
+  button.textContent = "檢查中...";
+
+  try {
+    // 1. 收集申請書與經費表資料
+    collectAllData();
+
+    // 2. 檢查人民團體名稱與登記地址
+    const associationResult = await checkAssociationData();
+
+    console.log("人民團體檢查結果：", associationResult);
+
+    // 3. 之後可在此加入其他檢查功能
+    // 例如：經費項目檢查、補助金額檢查、
+    //       申請書與經費表的金額交叉比對
+
+    // 4. 最後統一更新檢查結果畫面
+
+  } catch (error) {
+    console.error("檢查作業發生錯誤：", error);
+
+  } finally {
+    // 無論成功或失敗，都恢復按鈕
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
 
   // 提供經費清單的唯讀副本給其他腳本
   window.getExpenseRows = function () {
