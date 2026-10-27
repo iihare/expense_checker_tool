@@ -331,7 +331,10 @@ async function startCheck() {
 
     console.log("人民團體檢查結果：", associationResult);
 
-    // 3. 之後可在此加入其他檢查功能
+    // 3. 檢查經費表
+    const budgetResult = checkBudgetData();
+
+    console.log("經費表檢查結果：", budgetResult);
     // 例如：經費項目檢查、補助金額檢查、
     //       申請書與經費表的金額交叉比對
 
