@@ -234,7 +234,7 @@ function formatFieldValue(field) {
     field.addEventListener("input", markEdited);
     field.addEventListener("change", markEdited);
   });
-
+/*
   $("startCheckBtn").addEventListener("click", () => {
     checkedOnce = true;
     isStale = false;
@@ -246,6 +246,35 @@ function formatFieldValue(field) {
     $("summaryPane").style.flexBasis = summaryWidth + "px";
     showToast("已顯示側邊摘要（示意資料，尚未執行檢查）");
   });
+*/
+  $("startCheckBtn").addEventListener("click", async () => {
+  // 1. 收集 HTML 表單資料，更新 appState
+  collectAllData();
+
+  // 2. 執行人民團體名稱及地址檢查
+  const associationResult = await checkAssociationData();
+
+  // 3. 顯示檢查摘要（暫時保留原本的示意 UI）
+  checkedOnce = true;
+  isStale = false;
+
+  $("summaryPane").classList.add("visible");
+  $("splitter").classList.add("visible");
+
+  $("editStatus").textContent = "已完成資料檢查";
+  $("summaryStatus").textContent = "檢查完成";
+
+  $("workspace").style.setProperty(
+    "--summary-width",
+    summaryWidth + "px"
+  );
+
+  $("summaryPane").style.flexBasis = summaryWidth + "px";
+
+  console.log("人民團體檢查結果：", associationResult);
+
+  showToast("已完成人民團體資料檢查");
+});
 
   document.querySelectorAll("[data-goto]").forEach(button => button.addEventListener("click", () => {
     switchTab(button.dataset.goto);
