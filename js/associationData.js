@@ -1,6 +1,8 @@
 (function () {
   "use strict";
 
+  console.log("associationData.js 已開始執行");
+
   const MANUAL_SEARCH_URL =
     "https://map.dosw.gov.taipei/taipeiWelfare_map/all_new/corporation_map.aspx#";
 
