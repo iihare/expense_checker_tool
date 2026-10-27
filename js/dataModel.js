@@ -48,5 +48,9 @@
       expense: null,
       summary: null
     }
+    //保存文件勾選狀態的物件
+    expenseItemChecks: {
+    
+    }
   };
 })();
