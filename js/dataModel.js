@@ -41,16 +41,17 @@
     // 每筆資料的欄位對應原本 script.js 的 expenseRows
     expenseItems: [],
 
+    //保存文件勾選狀態的物件
+    expenseItemChecks: {
+    
+    },
+
     // 檢查結果
     checkResults: {
       association: null,
       amount: null,
       expense: null,
       summary: null
-    }
-    //保存文件勾選狀態的物件
-    expenseItemChecks: {
-    
     }
   };
 })();
