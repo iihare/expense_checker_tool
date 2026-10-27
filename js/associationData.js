@@ -122,25 +122,19 @@ async function checkName(inputName) {
   }
 
   try {
-    const url =
-      GAS_API_URL +
-      "?name=" + encodeURIComponent(name);
+    const url = GAS_API_URL + "?name=" + encodeURIComponent(name);
 
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(
-        "GAS 請求失敗：HTTP " + response.status
-      );
+      throw new Error("GAS 請求失敗:HTTP " + response.status);
     }
 
     const data = await response.json();
 
     // GAS 本身回報查詢失敗
     if (!data.success) {
-      throw new Error(
-        data.message || "GAS 查詢失敗"
-      );
+      throw new Error(data.message || "GAS 查詢失敗");
     }
 
     return {
@@ -151,7 +145,7 @@ async function checkName(inputName) {
     };
 
   } catch (error) {
-    console.error("人民團體名冊查詢失敗：", error);
+    console.error("人民團體名冊查詢失敗:", error);
 
     return {
       found: false,
@@ -161,27 +155,6 @@ async function checkName(inputName) {
     };
   }
 }
-
-
-      // 已經查完所有資料
-      if (
-        results.length === 0 ||
-        offset + results.length >= total
-      ) {
-        break;
-      }
-
-      // 繼續查詢下一頁
-      offset += LIMIT;
-    }
-
-    return {
-      found: false,
-      name: "",
-      address: "",
-      error: null
-    };
-  }
 
   /**
    * 比對申請書登記地址與名冊地址
