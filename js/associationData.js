@@ -6,10 +6,7 @@
   const MANUAL_SEARCH_URL =
     "https://map.dosw.gov.taipei/taipeiWelfare_map/all_new/corporation_map.aspx#";
 
-  const API_BASE_URL =
-    "https://data.taipei/api/v1/dataset/e194f151-adfa-4ab2-b0e0-8f64f470ef40";
-
-  const LIMIT = 1000;
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxlmZdgzZj_Thxb9wDPRhaROmSIiJrl_BIhp5CmGyDkz7mUvkwQ5TrtZLP-QPxAQWd-wQ/exec";
 
   /**
    * 檢查人民團體名稱及登記地址
@@ -107,70 +104,64 @@
     return result;
   }
 
-  /**
-   * 查詢臺北市人民團體名冊 API
-   * 使用名稱包含比對，找到第一筆符合的資料就回傳。
-   */
-  async function checkName(inputName) {
-    const name = String(inputName || "").trim();
+ 
+/**
+ * 透過 GAS Web App 查詢人民團體名冊
+ * GAS 負責呼叫臺北市 API，前端不再直接呼叫臺北市 API。
+ */
+async function checkName(inputName) {
+  const name = String(inputName || "").trim();
 
-    if (!name) {
-      return {
-        found: false,
-        name: "",
-        address: "",
-        error: null
-      };
+  if (!name) {
+    return {
+      found: false,
+      name: "",
+      address: "",
+      error: null
+    };
+  }
+
+  try {
+    const url =
+      GAS_API_URL +
+      "?name=" + encodeURIComponent(name);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        "GAS 請求失敗：HTTP " + response.status
+      );
     }
 
-    let offset = 0;
+    const data = await response.json();
 
-    while (true) {
-      const url =
-        API_BASE_URL +
-        "?scope=resourceAquire" +
-        "&limit=" + LIMIT +
-        "&offset=" + offset;
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`API 請求失敗：HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (
-        !data.result ||
-        !Array.isArray(data.result.results)
-      ) {
-        throw new Error("API 回傳格式不正確。");
-      }
-
-      const results = data.result.results;
-      const total = Number(data.result.count) || 0;
-
-      console.log(
-        "目前查詢範圍：" +
-        (results.length ? offset + 1 : offset) +
-        "～" +
-        Math.min(offset + results.length, total)
+    // GAS 本身回報查詢失敗
+    if (!data.success) {
+      throw new Error(
+        data.message || "GAS 查詢失敗"
       );
+    }
 
-      for (const item of results) {
-        const organizationName = String(item["名稱"] || "");
+    return {
+      found: Boolean(data.found),
+      name: data.name || "",
+      address: data.address || "",
+      error: null
+    };
 
-        if (organizationName.includes(name)) {
-          console.log("找到：", organizationName);
+  } catch (error) {
+    console.error("人民團體名冊查詢失敗：", error);
 
-          return {
-            found: true,
-            name: organizationName,
-            address: String(item["地址"] || ""),
-            error: null
-          };
-        }
-      }
+    return {
+      found: false,
+      name: "",
+      address: "",
+      error: error.message || String(error)
+    };
+  }
+}
+
 
       // 已經查完所有資料
       if (
