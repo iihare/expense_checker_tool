@@ -44,6 +44,7 @@
     // 檢查結果
     checkResults: {
       association: null,
+      amount: null,
       expense: null,
       summary: null
     }
