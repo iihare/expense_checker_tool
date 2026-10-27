@@ -93,7 +93,7 @@
     return items.map((item, index) => {
       const unitPrice = toNumber(item.unitPrice);
       const quantity = toNumber(item.quantity);
-      const budget = toNumber(item.budgetAmount);
+      const budget = toNumber(item.budget);
 
       const calculated = unitPrice * quantity;
       const isCorrect = calculated === budget;
