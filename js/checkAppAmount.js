@@ -1,4 +1,3 @@
-
 (function () {
   "use strict";
 
@@ -10,9 +9,7 @@
     const appState = window.appState;
 
     if (!appState || !appState.applicationData) {
-      throw new Error(
-        "找不到 appState.applicationData，請先載入資料模型。"
-      );
+      throw new Error("找不到 appState.applicationData，請先載入資料模型。");
     }
 
     const data = appState.applicationData;
