@@ -1,309 +1,239 @@
-(() => {
-  const $ = (id) => document.getElementById(id);
-  const expenseRows = [];
-  let nextId = 1;
-  let checkedOnce = false;
-  let isStale = false;
-  let summaryWidth = 370;
-  let toastTimer;
+(function () {
+  "use strict";
 
-  const moneyFields = ["selfFund", "otherAgency", "expectedFee", "otherAmount", "guidelineGrant", "totalBudget"];
-  const expenseFields = [
-    ["expenseItem", "item"],
-    ["unitPrice", "unitPrice"],
-    ["quantity", "quantity"],
-    ["budgetAmount", "budget"],
-    ["grantAmount", "grant"],
-    ["agencyAmount", "agency"],
-    ["expenseSelfFund", "self"],
-    ["expenseOther", "other"]
-  ];
-  const fmt = (value) => {
-    if (value === "" || value === null || value === undefined || Number.isNaN(Number(value))) return "—";
-    return Number(value).toLocaleString("zh-TW", { maximumFractionDigits: 2 });
-  };
-  function showToast(message) {
-    $("toast").textContent = message;
-    $("toast").classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => $("toast").classList.remove("show"), 2400);
-  }
-  function markEdited() {
-    if (!checkedOnce) {
-      $("editStatus").textContent = "尚未檢查";
-      return;
-    }
-    isStale = true;
-    $("editStatus").textContent = "資料已修改，請重新檢查";
-    $("summaryStatus").textContent = "結果已過期";
-  }
-  function switchTab(tab) {
-    document.querySelectorAll(".tab").forEach(button => {
-      const active = button.dataset.tab === tab;
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-selected", String(active));
-    });
-    $("applicationPage").classList.toggle("hidden", tab !== "application");
-    $("expensesPage").classList.toggle("hidden", tab !== "expenses");
-  }
-  document.querySelectorAll(".tab").forEach(button => button.addEventListener("click", () => switchTab(button.dataset.tab)));
+  const MANUAL_SEARCH_URL =
+    "https://map.dosw.gov.taipei/taipeiWelfare_map/all_new/corporation_map.aspx#";
 
-  function openModal() {
-    $("expenseModalBackdrop").classList.add("open");
-    document.body.style.overflow = "hidden";
-    setTimeout(() => $("expenseItem").focus(), 30);
-  }
-  function closeModal() {
-    $("expenseModalBackdrop").classList.remove("open");
-    document.body.style.overflow = "";
-  }
-  $("openAddModalBtn").addEventListener("click", openModal);
-  $("openAddModalIcon").addEventListener("click", openModal);
-  $("closeModalX").addEventListener("click", closeModal);
-  $("cancelModalBtn").addEventListener("click", closeModal);
-  $("expenseModalBackdrop").addEventListener("click", (event) => {
-    if (event.target === $("expenseModalBackdrop")) closeModal();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && $("expenseModalBackdrop").classList.contains("open")) closeModal();
-  });
+  const API_BASE_URL =
+    "https://data.taipei/api/v1/dataset/e194f151-adfa-4ab2-b0e0-8f64f470ef40";
 
-  // 金額／數量欄位：即時加入千分位逗號，內部運算前再移除逗號。
-  function rawNumericValue(value) {
-    return String(value ?? "").replace(/,/g, "").replace(/[^\d.-]/g, "");
-  }
-  function formatThousands(value) {
-    const raw = rawNumericValue(value);
-    if (raw === "" || raw === "-" || raw === "." || raw === "-.") return raw;
-    const negative = raw.startsWith("-");
-    const unsigned = negative ? raw.slice(1) : raw;
-    const parts = unsigned.split(".");
-    const integerPart = (parts[0] || "").replace(/^0+(?=\d)/, "");
-    const grouped = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    const decimalPart = parts.length > 1 ? "." + parts.slice(1).join("") : "";
-    return (negative ? "-" : "") + grouped + decimalPart;
-  }
-  
-function attachThousandsFormatting(field) {
-    let isComposing = false;
+  const LIMIT = 1000;
 
-    // 進入欄位時移除逗號，方便編輯。
-    field.addEventListener("focus", () => {
-        field.value = rawNumericValue(field.value);
-    });
+  /**
+   * 檢查人民團體名稱及登記地址
+   * 從 appState.applicationData 取得輸入資料，
+   * 將檢查結果存入 appState.checkResults.association。
+   */
+  async function checkAssociationData() {
+    const appState = window.appState;
 
-    // 開始輸入法組字。
-    field.addEventListener("compositionstart", () => {
-        isComposing = true;
-    });
-
-    // 組字期間不格式化，避免干擾輸入。
-    field.addEventListener("input", (event) => {
-        if (
-            isComposing ||
-            event.isComposing ||
-            event.inputType === "insertCompositionText"
-        ) {
-            return;
-        }
-
-        formatFieldValue(field);
-    });
-
-    // 組字結束後，再格式化欄位。
-    field.addEventListener("compositionend", () => {
-        isComposing = false;
-
-        // 等瀏覽器完成最後一次輸入，再處理格式。
-        setTimeout(() => {
-            formatFieldValue(field);
-        }, 0);
-    });
-
-    // 離開欄位時，確保顯示千分位逗號。
-    field.addEventListener("blur", () => {
-        formatFieldValue(field);
-    });
-}
-
-function formatFieldValue(field) {
-    const start = field.selectionStart ?? field.value.length;
-
-    // 計算游標前有幾個數字。
-    const digitsBeforeCursor = rawNumericValue(
-        field.value.slice(0, start)
-    ).replace(/[^\d]/g, "").length;
-
-    const formatted = formatThousands(field.value);
-    field.value = formatted;
-
-    // 依照數字數量還原游標位置。
-    let position = 0;
-    let counted = 0;
-
-    while (position < formatted.length && counted < digitsBeforeCursor) {
-        if (/\d/.test(formatted[position])) {
-            counted++;
-        }
-        position++;
+    if (!appState || !appState.applicationData) {
+      throw new Error("找不到 appState.applicationData，請先載入資料模型。");
     }
 
-    field.setSelectionRange(position, position);
-}
+    const applicationData = appState.applicationData;
 
-  function numericValue(value) {
-    const raw = String(value ?? "").replace(/,/g, "").trim();
-    return raw === "" ? "" : Number(raw);
-  }
+    const inputName = String(
+      applicationData.associationName ||
+      applicationData.unitName ||
+      ""
+    ).trim();
 
-  function renderExpenses() {
-    const tbody = $("expenseTableBody");
-    tbody.innerHTML = "";
-    $("expenseEmpty").style.display = expenseRows.length ? "none" : "block";
-    $("expenseCountLabel").textContent = `共 ${expenseRows.length} 筆經費`;
-    $("expenseTabCount").textContent = expenseRows.length ? `（${expenseRows.length}）` : "";
-    expenseRows.forEach((row) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="item-cell">${escapeHTML(row.item)}<div class="item-sub">經費項目</div></td>
-        <td class="numeric">${fmt(row.unitPrice)}</td>
-        <td class="numeric">${fmt(row.quantity)}</td>
-        <td class="numeric">${fmt(row.budget)}</td>
-        <td class="numeric">${fmt(row.grant)}</td>
-        <td class="numeric">${fmt(row.agency)}</td>
-        <td class="numeric">${fmt(row.self)}</td>
-        <td class="numeric">${fmt(row.other)}</td>
-        <td class="table-actions"><button class="text-button" data-edit="${row.id}" type="button">編輯</button><button class="text-button danger" data-delete="${row.id}" type="button">刪除</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
-    tbody.querySelectorAll("[data-delete]").forEach(button => button.addEventListener("click", () => {
-      const index = expenseRows.findIndex(row => row.id === Number(button.dataset.delete));
-      if (index >= 0) {
-        expenseRows.splice(index, 1);
-        renderExpenses();
-        markEdited();
-        showToast("已刪除經費資料");
+    const inputAddress = String(
+      applicationData.associationAddress ||
+      applicationData.registeredAddress ||
+      ""
+    ).trim();
+
+    const result = {
+      status: "completed",
+      found: false,
+      name: "",
+      address: "",
+      nameMessage: "",
+      addressMessage: "",
+      manualSearchUrl: MANUAL_SEARCH_URL,
+      error: null
+    };
+
+    // 沒有輸入單位名稱，不進行查詢
+    if (!inputName) {
+      result.status = "skipped";
+      result.nameMessage = "未輸入單位名稱";
+      result.addressMessage = "未進行地址比對";
+
+      appState.checkResults.association = result;
+      return result;
+    }
+
+    try {
+      // 查詢人民團體名冊
+      const nameResult = await checkName(inputName);
+
+      result.found = nameResult.found;
+      result.name = nameResult.name;
+      result.address = nameResult.address;
+
+      if (nameResult.error) {
+        throw new Error(nameResult.error);
       }
-    }));
-    tbody.querySelectorAll("[data-edit]").forEach(button => button.addEventListener("click", () => {
-      const row = expenseRows.find(item => item.id === Number(button.dataset.edit));
-      if (!row) return;
-      expenseFields.forEach(([fieldId, key]) => $(fieldId).value = row[key] ?? "");
-      $("expenseForm").dataset.editingId = String(row.id);
-      $("expenseModalTitle").textContent = "編輯經費";
-      $("expenseForm").querySelector('[type="submit"]').textContent = "儲存修改";
-      openModal();
-    }));
-  }
-  function escapeHTML(value) {
-    return String(value).replace(/[&<>"']/g, char => ({
-      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
-    })[char]);
-  }
-  $("expenseForm").addEventListener("submit", (event) => {
-    event.preventDefault();
-    const item = $("expenseItem").value;
-    if (!item) {
-      $("expenseItem").focus();
-      return;
+
+      if (nameResult.found) {
+        result.nameMessage =
+          `查詢結果：${nameResult.name}，是臺北市立案之人民團體`;
+
+        // 查詢成功後，比對登記地址
+        const addressResult = checkAddress(
+          inputAddress,
+          nameResult.address
+        );
+
+        result.addressMessage = addressResult.message;
+        result.addressMatch = addressResult.match;
+        result.addressStatus = addressResult.status;
+
+      } else {
+        result.nameMessage =
+          "查詢結果：未找到相符名稱，請手動搜尋人民團體名冊";
+
+        result.addressMessage = "未進行地址比對";
+        result.addressStatus = "not_checked";
+      }
+
+    } catch (error) {
+      console.error("人民團體資料查詢失敗：", error);
+
+      result.status = "error";
+      result.error = error.message || String(error);
+      result.nameMessage = "查詢失敗，請確認網路連線後再試";
+      result.addressMessage = "未進行地址比對";
+      result.addressStatus = "not_checked";
     }
-    const row = { id: Number($("expenseForm").dataset.editingId) || nextId++ };
-    expenseFields.forEach(([fieldId, key]) => {
-      const value = $(fieldId).value;
-      row[key] = key === "item" ? value : numericValue(value);
-    });
-    const editingId = Number($("expenseForm").dataset.editingId);
-    if (editingId) {
-      const index = expenseRows.findIndex(item => item.id === editingId);
-      if (index >= 0) expenseRows[index] = row;
-    } else {
-      expenseRows.push(row);
-    }
-    delete $("expenseForm").dataset.editingId;
-    $("expenseForm").reset();
-    $("expenseModalTitle").textContent = "新增經費";
-    $("expenseForm").querySelector('[type="submit"]').textContent = "加入經費清單";
-    closeModal();
-    renderExpenses();
-    markEdited();
-    showToast(editingId ? "已更新經費資料" : "已加入經費清單");
-  });
 
-  [...moneyFields.map(id => $(id)), $("unitName"), $("qualification"), $("leader"), $("registeredAddress"), $("mailingAddress")].forEach(field => {
-    field.addEventListener("input", markEdited);
-    field.addEventListener("change", markEdited);
-  });
+    appState.checkResults.association = result;
 
-  $("startCheckBtn").addEventListener("click", () => {
-    checkedOnce = true;
-    isStale = false;
-    $("summaryPane").classList.add("visible");
-    $("splitter").classList.add("visible");
-    $("editStatus").textContent = "已產生示意摘要";
-    $("summaryStatus").textContent = "示意結果";
-    $("workspace").style.setProperty("--summary-width", summaryWidth + "px");
-    $("summaryPane").style.flexBasis = summaryWidth + "px";
-    showToast("已顯示側邊摘要（示意資料，尚未執行檢查）");
-  });
-
-  document.querySelectorAll("[data-goto]").forEach(button => button.addEventListener("click", () => {
-    switchTab(button.dataset.goto);
-    showToast("已切換至經費表；目前為示意問題，未連結特定資料列");
-  }));
-
-  const splitter = $("splitter");
-  let dragging = false;
-  splitter.addEventListener("pointerdown", (event) => {
-    if (!$("summaryPane").classList.contains("visible")) return;
-    dragging = true;
-    splitter.classList.add("dragging");
-    splitter.setPointerCapture(event.pointerId);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  });
-  splitter.addEventListener("pointermove", (event) => {
-    if (!dragging) return;
-    const workspaceRect = $("workspace").getBoundingClientRect();
-    const desired = workspaceRect.right - event.clientX - 10;
-    summaryWidth = Math.max(280, Math.min(Math.round(desired), Math.min(650, workspaceRect.width * .62)));
-    $("summaryPane").style.flexBasis = summaryWidth + "px";
-  });
-  function stopDrag() {
-    dragging = false;
-    splitter.classList.remove("dragging");
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
+    return result;
   }
-  splitter.addEventListener("pointerup", stopDrag);
-  splitter.addEventListener("pointercancel", stopDrag);
-  splitter.addEventListener("lostpointercapture", stopDrag);
 
-  $("resetDemoBtn").addEventListener("click", () => {
-    if (!confirm("要清除目前輸入的資料並重設此原型嗎？")) return;
-    document.querySelectorAll("#applicationPage input").forEach(input => input.value = "");
-    $("qualification").value = "";
-    expenseRows.splice(0, expenseRows.length);
-    nextId = 1;
-    checkedOnce = false;
-    isStale = false;
-    $("summaryPane").classList.remove("visible");
-    $("splitter").classList.remove("visible");
-    $("editStatus").textContent = "尚未檢查";
-    $("expenseForm").reset();
-    delete $("expenseForm").dataset.editingId;
-    $("expenseModalTitle").textContent = "新增經費";
-    $("expenseForm").querySelector('[type="submit"]').textContent = "加入經費清單";
-    renderExpenses();
-    switchTab("application");
-    showToast("已重設示意資料");
-  });
+  /**
+   * 查詢臺北市人民團體名冊 API
+   * 使用名稱包含比對，找到第一筆符合的資料就回傳。
+   */
+  async function checkName(inputName) {
+    const name = String(inputName || "").trim();
 
-  // 所有金額欄位與經費表中的數字欄位都使用千分位顯示。
-  document.querySelectorAll(
-    '#applicationPage input[type="text"][inputmode="numeric"], ' +
-    '#expenseForm input[inputmode="numeric"], #expenseForm input[inputmode="decimal"]'
-  ).forEach(attachThousandsFormatting);
+    if (!name) {
+      return {
+        found: false,
+        name: "",
+        address: "",
+        error: null
+      };
+    }
 
-  renderExpenses();
+    let offset = 0;
+
+    while (true) {
+      const url =
+        API_BASE_URL +
+        "?scope=resourceAquire" +
+        "&limit=" + LIMIT +
+        "&offset=" + offset;
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`API 請求失敗：HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (
+        !data.result ||
+        !Array.isArray(data.result.results)
+      ) {
+        throw new Error("API 回傳格式不正確。");
+      }
+
+      const results = data.result.results;
+      const total = Number(data.result.count) || 0;
+
+      console.log(
+        "目前查詢範圍：" +
+        (results.length ? offset + 1 : offset) +
+        "～" +
+        Math.min(offset + results.length, total)
+      );
+
+      for (const item of results) {
+        const organizationName = String(item["名稱"] || "");
+
+        if (organizationName.includes(name)) {
+          console.log("找到：", organizationName);
+
+          return {
+            found: true,
+            name: organizationName,
+            address: String(item["地址"] || ""),
+            error: null
+          };
+        }
+      }
+
+      // 已經查完所有資料
+      if (
+        results.length === 0 ||
+        offset + results.length >= total
+      ) {
+        break;
+      }
+
+      // 繼續查詢下一頁
+      offset += LIMIT;
+    }
+
+    return {
+      found: false,
+      name: "",
+      address: "",
+      error: null
+    };
+  }
+
+  /**
+   * 比對申請書登記地址與名冊地址
+   */
+  function checkAddress(inputAddress, resultAddress) {
+    const applicationAddress = String(inputAddress || "").trim();
+    const registeredAddress = String(resultAddress || "").trim();
+
+    // 申請書沒有填寫地址
+    if (!applicationAddress) {
+      return {
+        status: "skipped",
+        match: null,
+        message: "未輸入登記地址"
+      };
+    }
+
+    // 名冊沒有提供地址
+    if (!registeredAddress) {
+      return {
+        status: "not_found",
+        match: false,
+        message: "名冊未提供地址，請手動確認"
+      };
+    }
+
+    // 完全相同才判定為相符，保留原本的比對方式
+    if (applicationAddress === registeredAddress) {
+      return {
+        status: "matched",
+        match: true,
+        message: "✓ 登記地址相符"
+      };
+    }
+
+    return {
+      status: "mismatch",
+      match: false,
+      message: "登記地址不相符，請手動確認"
+    };
+  }
+
+  // 提供其他 JS 檔案呼叫
+  window.checkAssociationData = checkAssociationData;
+  window.checkName = checkName;
+  window.checkAddress = checkAddress;
+
 })();
