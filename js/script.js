@@ -181,9 +181,14 @@ function formatFieldValue(field) {
       totalsElement.hidden = true;
     }
     //新增合計欄位結束點
+    /*
     console.log("經費清單：", expenseRows);
     console.log("預算金額：", expenseRows.map(row => row.budget));
-    console.log("合計結果：", window.calculateTotals(expenseRows));
+    console.log("合計結果：", window.calculateTotals(expenseRows));*/
+
+    console.log("經費筆數：", expenseRows.length);
+    console.log("經費資料快照：", JSON.stringify(expenseRows));
+    console.log("預算合計：",window.calculateTotals(expenseRows).budget);
     
     expenseRows.forEach((row) => {
       const tr = document.createElement("tr");
