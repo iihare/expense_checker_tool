@@ -157,6 +157,8 @@ function formatFieldValue(field) {
   }
 
   function renderExpenses() {
+    console.count("renderExpenses 執行次數");
+    
     const tbody = $("expenseTableBody");
     tbody.innerHTML = "";
     $("expenseEmpty").style.display = expenseRows.length ? "none" : "block";
