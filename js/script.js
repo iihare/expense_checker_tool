@@ -322,31 +322,42 @@ async function startCheck() {
   button.disabled = true;
   button.textContent = "檢查中...";
 
+  
   try {
-    // 1. 收集申請書與經費表資料
+    // 1. 重置上一次的檢查結果
+    appState.checkResults = {
+      association: null,
+      amount: null,
+      expense: null,
+      summary: null
+    };
+
+    // 2. 收集申請書與經費表資料
     collectAllData();
 
-    // 2. 檢查人民團體名稱與登記地址
-    const associationResult = await checkAssociationData();
+    // 3. 只有申請類型為「人民團體」才檢查團體資料
+    const type = appState.applicationData.qualification;
 
-    console.log("人民團體檢查結果：", associationResult);
+    if (type === "人民團體") {
+      const associationResult = await checkAssociationData();
+      console.log("人民團體檢查結果：", associationResult);
+    }
 
-    // 3. 檢查經費表
+    // 4. 檢查申請書金額
+    const amountResult = checkAmount();
+    console.log("申請書金額檢查結果：", amountResult);
+
+    // 5. 檢查經費表
     const budgetResult = checkBudgetData();
-
     console.log("經費表檢查結果：", budgetResult);
 
-    // 4. 比較申請書與經費表
+    // 6. 比對申請書與經費表金額
     const summaryResult = compareSummary();
-
     console.log("申請書與經費表交叉比對結果：", summaryResult);
-
-    // 5. 最後統一更新檢查結果畫面
 
   } catch (error) {
     console.error("檢查作業發生錯誤：", error);
-
-  } finally {
+  }finally {
     // 無論成功或失敗，都恢復按鈕
     button.disabled = false;
     button.textContent = originalText;
