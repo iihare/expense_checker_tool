@@ -162,6 +162,23 @@ function formatFieldValue(field) {
     $("expenseEmpty").style.display = expenseRows.length ? "none" : "block";
     $("expenseCountLabel").textContent = `共 ${expenseRows.length} 筆經費`;
     $("expenseTabCount").textContent = expenseRows.length ? `（${expenseRows.length}）` : "";
+    // 更新經費合計
+    const totalsElement = $("expenseTotals");
+
+    if (expenseRows.length > 0) {
+      const totals = calculateTotals(expenseRows);
+
+      $("totalBudget").textContent = fmt(totals.budget);
+      $("totalGrant").textContent = fmt(totals.ourGrant);
+      $("totalAgency").textContent = fmt(totals.otherGrant);
+      $("totalSelf").textContent = fmt(totals.selfFunded);
+      $("totalOther").textContent = fmt(totals.other);
+
+      totalsElement.hidden = false;
+    } else {
+      totalsElement.hidden = true;
+    }
+    //新增合計欄位結束點
     expenseRows.forEach((row) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
