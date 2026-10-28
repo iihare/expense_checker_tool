@@ -170,73 +170,75 @@
 
     <div class="splitter" id="splitter" role="separator" aria-label="拖曳調整摘要寬度" aria-orientation="vertical"></div>
 
-    <aside class="summary-pane" id="summaryPane" aria-label="檢查摘要">
-      <div class="summary-header">
-        <div class="summary-header-line">
-          <h3>檢查摘要</h3>
-          <span class="status-label" id="summaryStatus">示意結果</span>
+<aside class="summary-pane" id="summaryPane" aria-label="檢查摘要">
+  <div class="summary-header">
+    <div class="summary-header-line">
+      <h3>檢查摘要</h3>
+      <span class="status-label" id="summaryStatus">尚未檢查</span>
+    </div>
+  </div>
+
+  <div class="summary-scroll">
+    <!-- 統計卡片：保留原本的設計 -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">問題總數</div>
+        <div class="stat-value" id="issueTotal">0</div>
+        <div class="stat-note">錯誤與警告合計</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">受影響經費筆數</div>
+        <div class="stat-value" id="affectedCount">0</div>
+        <div class="stat-note">不重複計算經費筆數</div>
+      </div>
+    </div>
+
+    <div class="passed-card">
+      <span>通過檢查的項目</span>
+      <strong id="passedCount">0</strong>
+    </div>
+
+    <!-- 錯誤清單：由 JavaScript 填入 -->
+    <div class="section-title">錯誤</div>
+    <div id="errorList">
+      <p class="demo-note">尚未執行檢查。</p>
+    </div>
+
+    <!-- 警告清單：由 JavaScript 填入 -->
+    <div class="section-title">警告</div>
+    <div id="warningList">
+      <p class="demo-note">尚未執行檢查。</p>
+    </div>
+
+    <!-- 跨頁金額比對：保留原本的卡片樣式 -->
+    <div class="section-title">跨頁金額比對</div>
+    <div id="comparisonList">
+      <div class="comparison-card">
+        <h4>申請書與經費表</h4>
+        <div class="comparison-row">
+          <span>申請書金額</span>
+          <strong>—</strong>
+        </div>
+        <div class="comparison-row">
+          <span>經費表金額</span>
+          <strong>—</strong>
+        </div>
+        <div class="comparison-row">
+          <span>差額</span>
+          <strong>—</strong>
+        </div>
+        <div class="comparison-basis">
+          執行檢查後，將在此顯示實際比對結果。
         </div>
       </div>
-      <div class="summary-scroll">
-        <div class="stats">
-          <div class="stat-card">
-            <div class="stat-label">問題總數</div>
-            <div class="stat-value" id="issueTotal">3</div>
-            <div class="stat-note">錯誤與警告合計</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">受影響經費筆數</div>
-            <div class="stat-value" id="affectedCount">2</div>
-            <div class="stat-note">不重複計算經費筆數</div>
-          </div>
-        </div>
-        <div class="passed-card">
-          <span>通過檢查的項目</span>
-          <strong id="passedCount">—</strong>
-        </div>
+    </div>
 
-        <div class="section-title">錯誤 <small>紅色色帶</small></div>
-        <div id="errorList">
-          <article class="issue-card">
-            <div class="issue-stripe error"></div>
-            <div class="issue-content">
-              <div class="issue-title-line">
-                <span class="issue-title">場地費</span>
-                <span class="issue-count">2 項問題</span>
-              </div>
-              <p class="issue-message">單價 × 數量與預算金額不一致。</p>
-              <p class="issue-message">經費來源合計與預算金額不一致。</p>
-              <button class="issue-link" data-goto="expenses" type="button">前往經費表</button>
-            </div>
-          </article>
-        </div>
-
-        <div class="section-title">警告 <small>橘黃色色帶</small></div>
-        <div id="warningList">
-          <article class="issue-card">
-            <div class="issue-stripe warning"></div>
-            <div class="issue-content">
-              <div class="issue-title-line">
-                <span class="issue-title">交通費</span>
-                <span class="issue-count">1 項問題</span>
-              </div>
-              <p class="issue-message">此筆資料有需要人工留意的內容。</p>
-              <button class="issue-link" data-goto="expenses" type="button">前往經費表</button>
-            </div>
-          </article>
-        </div>
-
-        <div class="section-title">跨頁金額比對</div>
-        <div class="comparison-card">
-          <h4>申請書與經費表</h4>
-          <div class="comparison-row"><span>申請書金額</span><strong>—</strong></div>
-          <div class="comparison-row"><span>經費表金額</span><strong>—</strong></div>
-          <div class="comparison-row"><span>差額</span><strong>—</strong></div>
-          <div class="comparison-basis">計算依據會在此說明。本區目前僅為版面示意，未連結實際計算。</div>
-        </div>
-        <p class="demo-note">此側欄使用示意內容，不能作為實際案件的檢查依據。</p>
-      </div>
-    </aside>
+    <p class="demo-note" id="summaryNote">
+      檢查結果為輔助核對資訊，警告項目仍需依實際資料人工確認。
+    </p>
+  </div>
+</aside>
   </div>
 </main>
 
