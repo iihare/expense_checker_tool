@@ -166,7 +166,7 @@ function formatFieldValue(field) {
     const totalsElement = $("expenseTotals");
 
     if (expenseRows.length > 0) {
-      const totals = calculateTotals(expenseRows);
+      const totals = window.calculateTotals(expenseRows);
 
       $("totalBudget").textContent = fmt(totals.budget);
       $("totalGrant").textContent = fmt(totals.ourGrant);
