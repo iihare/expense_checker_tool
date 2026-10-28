@@ -157,7 +157,7 @@ function formatFieldValue(field) {
   }
 
   function renderExpenses() {
-    console.count("renderExpenses 執行次數");
+    console.log("RENDER_EXPENSES_TEST", Date.now());
     
     const tbody = $("expenseTableBody");
     tbody.innerHTML = "";
