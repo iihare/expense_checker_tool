@@ -161,7 +161,7 @@
   display: none;
 }
 
-.expense-totals {
+/*.expense-totals {
   margin-top: 12px;
   padding: 16px;
   border-top: 2px solid #d8d0c8;
@@ -201,5 +201,63 @@
   .expense-total-values {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}*/
+
+.expense-totals[hidden] {
+  display: none;
 }
+
+.expense-totals {
+  margin-top: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #d8d0c8;
+  background: #f8f6f2;
+  color: #5f3e36;
+  border-radius: 0 0 10px 10px;
+}
+
+.expense-total-label {
+  margin-bottom: 14px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.expense-total-values {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.expense-total-values > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #e8e1da;
+  border-radius: 8px;
+}
+
+.expense-total-values span {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #75665f;
+}
+
+.expense-total-values strong {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 螢幕較窄時改成兩欄，避免金額被擠壓 */
+@media (max-width: 900px) {
+  .expense-total-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+}
