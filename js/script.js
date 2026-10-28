@@ -335,10 +335,13 @@ async function startCheck() {
     const budgetResult = checkBudgetData();
 
     console.log("經費表檢查結果：", budgetResult);
-    // 例如：經費項目檢查、補助金額檢查、
-    //       申請書與經費表的金額交叉比對
 
-    // 4. 最後統一更新檢查結果畫面
+    // 4. 比較申請書與經費表
+    const summaryResult = compareSummary();
+
+    console.log("申請書與經費表交叉比對結果：", summaryResult);
+
+    // 5. 最後統一更新檢查結果畫面
 
   } catch (error) {
     console.error("檢查作業發生錯誤：", error);
