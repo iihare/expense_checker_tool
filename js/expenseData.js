@@ -7,12 +7,12 @@
     "item",
     "unitPrice",
     "quantity",
-    "budgetAmount",
-    "guidelineGrant",
-    "otherAgency",
-    "selfFund",
+    "budget",
+    "grant",
+    "agency",
+    "self",
     "other"
-  ];
+];
 
   // 需要提醒使用者準備的文件
   const ITEM_RULES = [
@@ -114,51 +114,53 @@
   /**
    * 檢查經費來源加總是否等於預算金額。
    */
-  function checkFunding(items) {
-    return items.map((item, index) => {
-      const budget = toNumber(item.budgetAmount);
+  
+function checkFunding(items) {
+  return items.map((item, index) => {
+    const budget = toNumber(item.budget);
 
-      const fundingTotal =
-        toNumber(item.guidelineGrant) +
-        toNumber(item.otherAgency) +
-        toNumber(item.selfFund) +
-        toNumber(item.other);
+    const fundingTotal =
+      toNumber(item.grant) +
+      toNumber(item.agency) +
+      toNumber(item.self) +
+      toNumber(item.other);
 
-      const isCorrect = fundingTotal === budget;
+    const isCorrect = fundingTotal === budget;
 
-      return {
-        index,
-        item: item.item || "",
-        isCorrect,
-        calculated: fundingTotal,
-        expected: budget,
-        message: isCorrect
-          ? "正確"
-          : `金額不符（計算值：${fundingTotal.toLocaleString("zh-TW")}）`
-      };
-    });
-  }
+    return {
+      index,
+      item: item.item || "",
+      isCorrect,
+      calculated: fundingTotal,
+      expected: budget,
+      message: isCorrect
+        ? "正確"
+        : `金額不符（計算值：${fundingTotal.toLocaleString("zh-TW")}）`
+    };
+  });
+}
 
   /**
    * 計算經費表各欄位合計。
    */
-  function calculateTotals(items) {
-    return items.reduce((totals, item) => {
-      totals.budget += toNumber(item.budgetAmount);
-      totals.ourGrant += toNumber(item.guidelineGrant);
-      totals.otherGrant += toNumber(item.otherAgency);
-      totals.selfFunded += toNumber(item.selfFund);
-      totals.other += toNumber(item.other);
+  
+function calculateTotals(items) {
+  return items.reduce((totals, item) => {
+    totals.budget += toNumber(item.budget);
+    totals.ourGrant += toNumber(item.grant);
+    totals.otherGrant += toNumber(item.agency);
+    totals.selfFunded += toNumber(item.self);
+    totals.other += toNumber(item.other);
 
-      return totals;
-    }, {
-      budget: 0,
-      ourGrant: 0,
-      otherGrant: 0,
-      selfFunded: 0,
-      other: 0
-    });
-  }
+    return totals;
+  }, {
+    budget: 0,
+    ourGrant: 0,
+    otherGrant: 0,
+    selfFunded: 0,
+    other: 0
+  });
+}
 
   /**
    * 根據經費項目產生文件提醒。
