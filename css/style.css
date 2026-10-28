@@ -161,48 +161,6 @@
   display: none;
 }
 
-/*.expense-totals {
-  margin-top: 12px;
-  padding: 16px;
-  border-top: 2px solid #d8d0c8;
-  background: #f8f6f2;
-  color: #5f3e36;
-}
-
-.expense-total-label {
-  margin-bottom: 12px;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.expense-total-values {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(120px, 1fr));
-  gap: 16px;
-}
-
-.expense-total-values > div {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.expense-total-values span {
-  font-size: 14px;
-  color: #75665f;
-}
-
-.expense-total-values strong {
-  font-size: 17px;
-  font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 900px) {
-  .expense-total-values {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}*/
-
 .expense-totals[hidden] {
   display: none;
 }
