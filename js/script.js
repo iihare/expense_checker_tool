@@ -401,13 +401,8 @@ async function startCheck() {
   
   try {
     // 1. 重置上一次的檢查結果
-    appState.checkResults = {
-      association: null,
-      amount: null,
-      expense: null,
-      summary: null
-    };
-
+    window.resetCheckResults();
+    
     // 2. 收集申請書與經費表資料
     collectAllData();
 
