@@ -303,7 +303,7 @@ function formatFieldValue(field) {
   splitter.addEventListener("pointercancel", stopDrag);
   splitter.addEventListener("lostpointercapture", stopDrag);
 
-  $("resetDemoBtn").addEventListener("click", () => {
+ /* $("resetDemoBtn").addEventListener("click", () => {
     if (!confirm("要清除目前輸入的資料並重設此原型嗎？")) return;
     document.querySelectorAll("#applicationPage input").forEach(input => input.value = "");
     $("qualification").value = "";
@@ -321,7 +321,7 @@ function formatFieldValue(field) {
     renderExpenses();
     switchTab("application");
     showToast("已重設示意資料");
-  });
+  });*/
 
   // 所有金額欄位與經費表中的數字欄位都使用千分位顯示。
   document.querySelectorAll(
@@ -331,7 +331,61 @@ function formatFieldValue(field) {
 
   renderExpenses();
 
-  
+$("resetDemoBtn").addEventListener("click", resetDemoData);
+
+function resetDemoData() {
+  if (!confirm("要清除目前輸入的資料並重設此原型嗎？")) {
+    return;
+  }
+
+  // 清空申請書畫面欄位
+  document.querySelectorAll("#applicationPage input").forEach(input => {
+    if (input.type === "checkbox" || input.type === "radio") {
+      input.checked = false;
+    } else {
+      input.value = "";
+    }
+  });
+
+  document.querySelectorAll("#applicationPage textarea").forEach(textarea => {
+    textarea.value = "";
+  });
+
+  document.querySelectorAll("#applicationPage select").forEach(select => {
+    select.selectedIndex = 0;
+  });
+
+  // 重設經費清單及相關狀態
+  expenseRows.splice(0, expenseRows.length);
+  nextId = 1;
+  checkedOnce = false;
+  isStale = false;
+
+  // 重設經費表單
+  $("expenseForm").reset();
+  delete $("expenseForm").dataset.editingId;
+  $("expenseModalTitle").textContent = "新增經費";
+  $("expenseForm").querySelector('[type="submit"]').textContent =
+    "加入經費清單";
+
+  // 呼叫 dataModel.js 的公開函式
+  window.resetAppState();
+
+  // 清除側邊欄的舊檢查結果
+  window.clearCheckSummary();
+
+  // 隱藏檢查摘要及分隔線
+  $("summaryPane").classList.remove("visible");
+  $("splitter").classList.remove("visible");
+  $("editStatus").textContent = "尚未檢查";
+
+  // 更新畫面並切回申請書
+  renderExpenses();
+  switchTab("application");
+
+  showToast("已重設示意資料");
+}
+
 async function startCheck() {
   const button = document.getElementById("startCheckBtn");
 
