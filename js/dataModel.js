@@ -54,7 +54,14 @@
       summary: null
     }
   };
-
+  function resetCheckResults() {
+    Object.assign(window.appState.checkResults, {
+      association: null,
+      amount: null,
+      expense: null,
+      summary: null
+    });
+  }
   
   window.resetAppState = function () {
     // 重設申請書資料
@@ -83,12 +90,7 @@
     });
   
     // 重設檢查結果
-    Object.assign(window.appState.checkResults, {
-      association: null,
-      amount: null,
-      expense: null,
-      summary: null
-    });
+    resetCheckResults();
   };
 
 })();
