@@ -372,6 +372,9 @@
       return;
     }
 
+    // 有檢查結果時，才顯示側邊欄
+    document.getElementById("summaryPane")?.classList.add("visible");
+    
     const items = collectCheckItems(results);
 
     const comparisons = Array.isArray(results.summary)
