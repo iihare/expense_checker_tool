@@ -93,4 +93,7 @@
     resetCheckResults();
   };
 
+    // 暴露給其他檔案使用
+  window.resetCheckResults = resetCheckResults;
+
 })();
