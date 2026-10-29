@@ -377,6 +377,9 @@ async function startCheck() {
     const summaryResult = compareSummary();
     console.log("申請書與經費表交叉比對結果：", summaryResult);
 
+    // 7. 更新檢查摘要側邊欄
+    window.renderCheckSummary();
+
   } catch (error) {
     console.error("檢查作業發生錯誤：", error);
   }finally {
