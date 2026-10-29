@@ -373,7 +373,10 @@
     }
 
     // 有檢查結果時，才顯示側邊欄
-    document.getElementById("summaryPane")?.classList.add("visible");
+    //document.getElementById("summaryPane")?.classList.add("visible");
+    // 顯示摘要與拖曳分隔線
+    $("summaryPane").classList.add("visible");
+    $("splitter").classList.add("visible");
     
     const items = collectCheckItems(results);
 
