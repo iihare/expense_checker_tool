@@ -54,4 +54,41 @@
       summary: null
     }
   };
+
+  
+  window.resetAppState = function () {
+    // 重設申請書資料
+    Object.assign(window.appState.applicationData, {
+      unitName: "",
+      qualification: "",
+      leader: "",
+      registeredAddress: "",
+      mailingAddress: "",
+      totalBudget: 0,
+      guidelineGrant: 0,
+      selfFund: 0,
+      otherAgency: 0,
+      expectedFee: 0,
+      otherAmount: 0,
+      associationName: "",
+      associationAddress: ""
+    });
+
+    // 清空經費資料，保留原陣列參照
+    window.appState.expenseItems.splice(0);
+  
+    // 清空文件勾選狀態
+    Object.keys(window.appState.expenseItemChecks).forEach(key => {
+      delete window.appState.expenseItemChecks[key];
+    });
+  
+    // 重設檢查結果
+    Object.assign(window.appState.checkResults, {
+      association: null,
+      amount: null,
+      expense: null,
+      summary: null
+    });
+  };
+
 })();
