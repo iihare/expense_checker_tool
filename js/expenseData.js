@@ -1,4 +1,3 @@
-
 (function () {
   "use strict";
 
@@ -107,6 +106,7 @@
       const isCorrect = calculated === budget;
 
       return {
+        id: item.id, // 新增：保留經費 ID
         index,
         item: item.item || "",
         isCorrect,
