@@ -245,3 +245,16 @@
        grid-template-columns: repeat(2, minmax(0, 1fr));
      }
    }
+
+    /* 錯誤資料列高亮 */
+    #expenseTableBody tr.error-highlight {
+      outline: 2px solid #cc4125;
+      outline-offset: -2px;
+    }
+    
+    /* 錯誤欄位高亮 */
+    #expenseTableBody td.error-highlight {
+      background-color: #fff0e8;
+      color: #cc4125;
+      font-weight: 700;
+    }
