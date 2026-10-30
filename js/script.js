@@ -51,7 +51,7 @@
   function openModal() {
     $("expenseModalBackdrop").classList.add("open");
     document.body.style.overflow = "hidden";
-    setTimeout(() => $("expenseItem").focus(), 30);
+    //setTimeout(() => $("expenseItem").focus(), 30);
   }
   function closeModal() {
     $("expenseModalBackdrop").classList.remove("open");
