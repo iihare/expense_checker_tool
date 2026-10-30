@@ -142,6 +142,34 @@
 
     content.append(titleLine);
 
+    // 經費項目警告的人工確認勾選
+    if (item.confirmationKey) {
+      const confirmLabel = makeElement("label", "issue-confirm-label");
+      const checkbox = document.createElement("input");
+      const confirmText = makeElement("span", "issue-confirm-status");
+    
+      checkbox.type = "checkbox";
+      checkbox.checked = item.confirmed === true;
+    
+      confirmText.textContent = checkbox.checked
+        ? "已確認"
+        : "待確認";
+    
+      confirmLabel.append(checkbox, confirmText);
+      content.append(confirmLabel);
+    
+      checkbox.addEventListener("change", () => {
+        const appState = window.appState;
+    
+        appState.expenseItemChecks[item.confirmationKey] =
+          checkbox.checked;
+    
+        confirmText.textContent = checkbox.checked
+          ? "已確認"
+          : "待確認";
+      });
+    }
+
     content.append(
       makeElement("p", "issue-message", item.message)
     );
@@ -413,7 +441,7 @@
       }
 
       // 文件提醒：需依實際 itemType 格式確認欄位
-      if (Array.isArray(expense.itemType)) {
+      /*if (Array.isArray(expense.itemType)) {
         expense.itemType.forEach(item => {
           const checked = item.checked === true ||
             item.isChecked === true;
@@ -425,6 +453,21 @@
               ? "已確認此項文件提醒。"
               : item.message || item.label || "請確認相關文件是否備妥。",
             location: "經費表"
+          });
+        });
+      }*/
+      // 文件提醒：保留警告狀態，另外記錄人工確認狀態
+      if (Array.isArray(expense.itemType)) {
+        expense.itemType.forEach(item => {
+          items.push({
+            status: "warning",
+            title: item.label || item.item || "文件提醒",
+            message: item.message || item.label || "請確認相關文件是否備妥。",
+            location: "經費表",
+      
+            // 人工確認相關資料
+            confirmationKey: item.label || item.item,
+            confirmed: item.checked === true || item.isChecked === true
           });
         });
       }
