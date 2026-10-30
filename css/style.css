@@ -272,3 +272,21 @@
       color: #cc4125;
       font-weight: 700;
     }
+
+    .issue-confirm-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    
+    .issue-confirm-label input {
+      cursor: pointer;
+    }
+    
+    .issue-confirm-status {
+      font-weight: 600;
+    }
