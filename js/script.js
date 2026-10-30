@@ -186,17 +186,20 @@ function formatFieldValue(field) {
     
     expenseRows.forEach((row) => {
       const tr = document.createElement("tr");
+      tr.dataset.rowId = row.id;
+    
       tr.innerHTML = `
         <td class="item-cell">${escapeHTML(row.item)}<div class="item-sub">經費項目</div></td>
         <td class="numeric">${fmt(row.unitPrice)}</td>
         <td class="numeric">${fmt(row.quantity)}</td>
-        <td class="numeric">${fmt(row.budget)}</td>
+        <td class="numeric" data-field="budget">${fmt(row.budget)}</td>
         <td class="numeric">${fmt(row.grant)}</td>
         <td class="numeric">${fmt(row.agency)}</td>
         <td class="numeric">${fmt(row.self)}</td>
         <td class="numeric">${fmt(row.other)}</td>
         <td class="table-actions"><button class="text-button" data-edit="${row.id}" type="button">編輯</button><button class="text-button danger" data-delete="${row.id}" type="button">刪除</button></td>
       `;
+    
       tbody.appendChild(tr);
     });
     tbody.querySelectorAll("[data-delete]").forEach(button => button.addEventListener("click", () => {
@@ -218,6 +221,7 @@ function formatFieldValue(field) {
       openModal();
     }));
   }
+  
   function escapeHTML(value) {
     return String(value).replace(/[&<>"']/g, char => ({
       "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
