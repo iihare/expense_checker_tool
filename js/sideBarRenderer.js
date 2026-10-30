@@ -109,12 +109,14 @@
   }
 
   // 統一清單項目的資料格式
-  function normalizeResult(result, title, location) {
+  function normalizeResult(result, title, location, field = null) {
     return {
       id: result && typeof result === "object"
-      ? result.id
-      : null,
-      
+        ? result.id ?? null
+        : null,
+  
+      field: field ?? null,
+  
       status: getStatus(result),
       title:
         result && typeof result === "object"
@@ -270,12 +272,12 @@
   function collectCheckItems(results) {
     const items = [];
 
-    function add(result, title, location) {
+    function add(result, title, location, field = null) {
       if (result == null) return;
 
       // 單筆檢查結果
       if (!Array.isArray(result) && typeof result !== "object") {
-        items.push(normalizeResult(result, title, location));
+        items.push(normalizeResult(result, title, location, field));
         return;
       }
 
@@ -285,7 +287,8 @@
           add(
             entry,
             entry?.item || entry?.name || `${title}（${index + 1}）`,
-            location
+            location,
+            field
           );
         });
         return;
@@ -301,7 +304,7 @@
       ].some(key => key in result);
 
       if (hasResultFields) {
-        items.push(normalizeResult(result, title, location));
+        items.push(normalizeResult(result, title, location, field));
         return;
       }
 
@@ -321,7 +324,7 @@
           address: "人民團體登記地址"
         };
 
-        add(value, labelMap[key] || `${title}－${key}`, location);
+        add(value, labelMap[key] || `${title}－${key}`, location, field);
       });
     }
 
@@ -340,11 +343,21 @@
       const expense = results.expense;
 
       if (expense.unitPrice != null) {
-        add(expense.unitPrice, "單價 × 數量與預算金額", "經費表");
+        add(
+          expense.unitPrice,
+          "單價 × 數量與預算金額",
+          "經費表",
+          "budget"
+        );
       }
-
+      
       if (expense.funding != null) {
-        add(expense.funding, "經費分配合計", "經費表");
+        add(
+          expense.funding,
+          "經費分配合計",
+          "經費表",
+          "budget"
+        );
       }
 
       // 文件提醒：需依實際 itemType 格式確認欄位
