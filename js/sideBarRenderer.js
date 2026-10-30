@@ -111,6 +111,10 @@
   // 統一清單項目的資料格式
   function normalizeResult(result, title, location) {
     return {
+      id: result && typeof result === "object"
+      ? result.id
+      : null,
+      
       status: getStatus(result),
       title:
         result && typeof result === "object"
