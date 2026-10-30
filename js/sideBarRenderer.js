@@ -172,21 +172,65 @@
       button.dataset.field = item.field;
     }
   
-    button.addEventListener("click", () => {
-      const target = document.querySelector(
-        '[data-tab="expenses"], [data-page="expenses"]'
-      );
-  
-      if (target) {
-        target.click();
-      }
-    });
+   button.addEventListener("click", () => {
+    navigateToExpense(
+      button.dataset.rowId,
+      button.dataset.field
+    );
+  });
   
     content.append(button);
   }
 
     card.append(stripe, content);
     return card;
+  }
+
+  /**
+ * 前往指定的經費資料列與欄位
+ */
+  function navigateToExpense(rowId, field) {
+    // 切換至經費表頁籤
+    const target = document.querySelector(
+      '[data-tab="expenses"], [data-page="expenses"]'
+    );
+  
+    if (target) {
+      target.click();
+    }
+  
+    // 沒有指定經費 ID 或欄位時，不執行定位
+    if (!rowId || !field) return;
+  
+    // 找到指定的經費資料列
+    const row = document.querySelector(
+      `#expenseTableBody tr[data-row-id="${rowId}"]`
+    );
+  
+    if (!row) return;
+  
+    // 找到指定欄位
+    const cell = row.querySelector(
+      `[data-field="${field}"]`
+    );
+  
+    if (!cell) return;
+  
+    // 捲動至錯誤資料列
+    row.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest"
+    });
+  
+    // 清除先前的高亮
+    document.querySelectorAll(".error-highlight").forEach(element => {
+      element.classList.remove("error-highlight");
+    });
+  
+    // 高亮指定資料列與欄位
+    row.classList.add("error-highlight");
+    cell.classList.add("error-highlight");
   }
 
   function renderIssueList(containerId, items, status) {
