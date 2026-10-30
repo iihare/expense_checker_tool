@@ -136,6 +136,7 @@ function checkFunding(items) {
     const isCorrect = fundingTotal === budget;
 
     return {
+      id: item.id, // 新增：保留經費 ID
       index,
       item: item.item || "",
       isCorrect,
