@@ -159,7 +159,7 @@
   .empty-state strong { display:block; color:var(--text); font-size:14px; margin-bottom:6px; }
   .empty-state p { margin:0; font-size:12px; }
   .table-footer { display:flex; justify-content:space-between; align-items:center; gap:12px; color:var(--muted); font-size:12px; padding:12px 2px 0; }
-  .modal-backdrop { position:fixed; inset:0; background:rgba(35,31,28,.42); display:none; align-items:center; justify-content:center; padding:22px; z-index:50; }
+  .modal-backdrop { position:fixed; inset:0; background:rgba(35,31,28,.42); display:none; align-items:center; justify-content:center; padding:22px; z-index:1000; }
   .modal-backdrop.open { display:flex; }
   .modal { width:min(760px,100%); max-height:min(90vh,900px); overflow:auto; background:var(--surface); border-radius:16px; box-shadow:var(--shadow); }
   .modal-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:22px 24px 18px; border-bottom:1px solid var(--border); }
