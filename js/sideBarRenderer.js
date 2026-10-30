@@ -152,30 +152,38 @@
       );
     }
 
-    // 網站沒有試算表儲存格跳轉功能。
     // 保留原本的「前往經費表」操作，切換到網站中的經費表頁籤。
-    if (item.location === "經費表") {
-      const button = makeElement(
-        "button",
-        "issue-link",
-        "前往經費表"
-      );
-
-      button.type = "button";
-      button.dataset.goto = "expenses";
-
-      button.addEventListener("click", () => {
-        const target = document.querySelector(
-          '[data-tab="expenses"], [data-page="expenses"]'
-        );
-
-        if (target) {
-          target.click();
-        }
-      });
-
-      content.append(button);
+   if (item.location === "經費表") {
+    const button = makeElement(
+      "button",
+      "issue-link",
+      "前往經費表"
+    );
+  
+    button.type = "button";
+    button.dataset.goto = "expenses";
+  
+    // 儲存要定位的經費 ID 與欄位
+    if (item.id != null) {
+      button.dataset.rowId = item.id;
     }
+  
+    if (item.field) {
+      button.dataset.field = item.field;
+    }
+  
+    button.addEventListener("click", () => {
+      const target = document.querySelector(
+        '[data-tab="expenses"], [data-page="expenses"]'
+      );
+  
+      if (target) {
+        target.click();
+      }
+    });
+  
+    content.append(button);
+  }
 
     card.append(stripe, content);
     return card;
