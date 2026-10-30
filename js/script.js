@@ -52,6 +52,10 @@
     $("expenseModalBackdrop").classList.add("open");
     document.body.style.overflow = "hidden";
     //setTimeout(() => $("expenseItem").focus(), 30);
+   $("expenseModalBackdrop").addEventListener("focusin", event => {
+      $("debugStatus").textContent =
+        "目前取得焦點：" + event.target.id;
+    });
   }
   function closeModal() {
     $("expenseModalBackdrop").classList.remove("open");
