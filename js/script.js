@@ -72,6 +72,14 @@
     if (event.key === "Escape" && $("expenseModalBackdrop").classList.contains("open")) closeModal();
   });
 
+  document.querySelectorAll("#expenseForm input").forEach(field => {
+    field.addEventListener("click", () => {
+      const active = document.activeElement;
+      $("debugStatus").textContent =
+        `點擊：${field.id}；目前焦點：${active.id}`;
+    });
+  });
+
   // 金額／數量欄位：即時加入千分位逗號，內部運算前再移除逗號。
   function rawNumericValue(value) {
     return String(value ?? "").replace(/,/g, "").replace(/[^\d.-]/g, "");
