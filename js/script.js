@@ -52,10 +52,6 @@
     $("expenseModalBackdrop").classList.add("open");
     document.body.style.overflow = "hidden";
     //setTimeout(() => $("expenseItem").focus(), 30);
-   $("expenseModalBackdrop").addEventListener("focusin", event => {
-      $("debugStatus").textContent =
-        "目前取得焦點：" + event.target.id;
-    });
   }
   function closeModal() {
     $("expenseModalBackdrop").classList.remove("open");
@@ -70,14 +66,6 @@
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && $("expenseModalBackdrop").classList.contains("open")) closeModal();
-  });
-
-  document.querySelectorAll("#expenseForm input").forEach(field => {
-    field.addEventListener("click", () => {
-      const active = document.activeElement;
-      $("debugStatus").textContent =
-        `點擊：${field.id}；目前焦點：${active.id}`;
-    });
   });
 
   // 金額／數量欄位：即時加入千分位逗號，內部運算前再移除逗號。
@@ -199,11 +187,6 @@ function formatFieldValue(field) {
     } else {
       totalsElement.hidden = true;
     }
-    //新增合計欄位結束點
-    /*
-    console.log("經費清單：", expenseRows);
-    console.log("預算金額：", expenseRows.map(row => row.budget));
-    console.log("合計結果：", window.calculateTotals(expenseRows));*/
     
     expenseRows.forEach((row) => {
       const tr = document.createElement("tr");
@@ -281,19 +264,7 @@ function formatFieldValue(field) {
     field.addEventListener("input", markEdited);
     field.addEventListener("change", markEdited);
   });
-/*
-  $("startCheckBtn").addEventListener("click", () => {
-    checkedOnce = true;
-    isStale = false;
-    $("summaryPane").classList.add("visible");
-    $("splitter").classList.add("visible");
-    $("editStatus").textContent = "已產生示意摘要";
-    $("summaryStatus").textContent = "示意結果";
-    $("workspace").style.setProperty("--summary-width", summaryWidth + "px");
-    $("summaryPane").style.flexBasis = summaryWidth + "px";
-    showToast("已顯示側邊摘要（示意資料，尚未執行檢查）");
-  });
-*/
+
   document.getElementById("startCheckBtn").addEventListener("click", startCheck);
 
   document.querySelectorAll("[data-goto]").forEach(button => button.addEventListener("click", () => {
@@ -327,26 +298,6 @@ function formatFieldValue(field) {
   splitter.addEventListener("pointerup", stopDrag);
   splitter.addEventListener("pointercancel", stopDrag);
   splitter.addEventListener("lostpointercapture", stopDrag);
-
- /* $("resetDemoBtn").addEventListener("click", () => {
-    if (!confirm("要清除目前輸入的資料並重設此原型嗎？")) return;
-    document.querySelectorAll("#applicationPage input").forEach(input => input.value = "");
-    $("qualification").value = "";
-    expenseRows.splice(0, expenseRows.length);
-    nextId = 1;
-    checkedOnce = false;
-    isStale = false;
-    $("summaryPane").classList.remove("visible");
-    $("splitter").classList.remove("visible");
-    $("editStatus").textContent = "尚未檢查";
-    $("expenseForm").reset();
-    delete $("expenseForm").dataset.editingId;
-    $("expenseModalTitle").textContent = "新增經費";
-    $("expenseForm").querySelector('[type="submit"]').textContent = "加入經費清單";
-    renderExpenses();
-    switchTab("application");
-    showToast("已重設示意資料");
-  });*/
 
   // 所有金額欄位與經費表中的數字欄位都使用千分位顯示。
   document.querySelectorAll(
