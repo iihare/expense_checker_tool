@@ -147,7 +147,7 @@ function formatFieldValue(field) {
     ).replace(/[^\d]/g, "").length;
 
     const formatted = formatThousands(field.value);
-    field.value = formatted;
+    //field.value = formatted;
 
     // 依照數字數量還原游標位置。
     let position = 0;
