@@ -160,7 +160,7 @@ function formatFieldValue(field) {
         position++;
     }
 
-    field.setSelectionRange(position, position);
+    //field.setSelectionRange(position, position);
 }
 
   function numericValue(value) {
