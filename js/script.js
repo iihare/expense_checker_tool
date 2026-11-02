@@ -96,20 +96,33 @@
     return (negative ? "-" : "") + grouped + decimalPart;
   }
   
-function attachThousandsFormatting(field) {
+  function attachThousandsFormatting(field) {
+    const isMobile = window.matchMedia("(max-width: 760px)").matches;
+
     let isComposing = false;
 
-    // 進入欄位時移除逗號，方便編輯。
+    if (isMobile) {
+        // 手機版：只在離開欄位時格式化
+        field.addEventListener("focus", () => {
+            field.value = rawNumericValue(field.value);
+        });
+
+        field.addEventListener("blur", () => {
+            field.value = formatThousands(field.value);
+        });
+
+        return;
+    }
+
+    // 桌面版：維持原本即時格式化
     field.addEventListener("focus", () => {
         field.value = rawNumericValue(field.value);
     });
 
-    // 開始輸入法組字。
     field.addEventListener("compositionstart", () => {
         isComposing = true;
     });
 
-    // 組字期間不格式化，避免干擾輸入。
     field.addEventListener("input", (event) => {
         if (
             isComposing ||
@@ -122,17 +135,13 @@ function attachThousandsFormatting(field) {
         formatFieldValue(field);
     });
 
-    // 組字結束後，再格式化欄位。
     field.addEventListener("compositionend", () => {
         isComposing = false;
-
-        // 等瀏覽器完成最後一次輸入，再處理格式。
         setTimeout(() => {
             formatFieldValue(field);
         }, 0);
     });
 
-    // 離開欄位時，確保顯示千分位逗號。
     field.addEventListener("blur", () => {
         formatFieldValue(field);
     });
@@ -147,7 +156,7 @@ function formatFieldValue(field) {
     ).replace(/[^\d]/g, "").length;
 
     const formatted = formatThousands(field.value);
-    //field.value = formatted;
+    field.value = formatted;
 
     // 依照數字數量還原游標位置。
     let position = 0;
@@ -160,7 +169,7 @@ function formatFieldValue(field) {
         position++;
     }
 
-    //field.setSelectionRange(position, position);
+    field.setSelectionRange(position, position);
 }
 
   function numericValue(value) {
