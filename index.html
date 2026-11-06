@@ -18,6 +18,7 @@
     </div>
   </div>
   <div class="header-actions">
+    <button class="button" id="importFilesBtn" type="button">匯入檔案</button>
     <button class="button" id="resetDemoBtn" type="button">重設資料</button>
     <button class="button primary" id="startCheckBtn" type="button">開始檢查</button>
   </div>
@@ -336,6 +337,75 @@
   </div>
 </div>
 
+
+<!-- 文件匯入 Modal：目前先完成檔案選取與管理，OCR 於下一階段接入 -->
+<div class="import-modal-backdrop" id="importModalBackdrop" aria-hidden="true">
+  <section class="import-modal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+    <header class="import-modal-header">
+      <div>
+        <h2 id="importModalTitle">匯入檔案</h2>
+        <p>選擇申請書及經費概算表的 PDF 或圖片檔案。</p>
+      </div>
+      <button class="import-close-btn" id="closeImportModalBtn" type="button" aria-label="關閉匯入視窗">×</button>
+    </header>
+
+    <div class="import-modal-body">
+      <section class="import-file-section" aria-labelledby="applicationFilesTitle">
+        <div class="import-section-heading">
+          <div>
+            <h3 id="applicationFilesTitle">申請書</h3>
+            <p>可選取一個或多個檔案。</p>
+          </div>
+          <span class="import-file-count" id="applicationFileCount">尚未選擇</span>
+        </div>
+        <label class="import-file-picker" for="applicationFilesInput">
+          <span class="import-picker-icon">＋</span>
+          <span>選擇申請書檔案</span>
+          <small>PDF、JPG、JPEG、PNG</small>
+        </label>
+        <input class="import-hidden-input" id="applicationFilesInput" type="file"
+          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" multiple>
+        <ul class="import-file-list" id="applicationFileList" aria-live="polite">
+          <li class="import-empty-files">尚未選擇檔案</li>
+        </ul>
+      </section>
+
+      <section class="import-file-section" aria-labelledby="expenseFilesTitle">
+        <div class="import-section-heading">
+          <div>
+            <h3 id="expenseFilesTitle">經費概算表</h3>
+            <p>可選取一個或多個檔案。</p>
+          </div>
+          <span class="import-file-count" id="expenseFileCount">尚未選擇</span>
+        </div>
+        <label class="import-file-picker" for="expenseFilesInput">
+          <span class="import-picker-icon">＋</span>
+          <span>選擇經費概算表檔案</span>
+          <small>PDF、JPG、JPEG、PNG</small>
+        </label>
+        <input class="import-hidden-input" id="expenseFilesInput" type="file"
+          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" multiple>
+        <ul class="import-file-list" id="expenseFileList" aria-live="polite">
+          <li class="import-empty-files">尚未選擇檔案</li>
+        </ul>
+      </section>
+
+      <div class="import-notice" id="importNotice" role="status">
+        <strong>檔案會在瀏覽器中處理</strong>
+        <span>這個匯入流程預計採用瀏覽器端辨識，不會將文件上傳到外部伺服器。OCR 功能尚未接入；目前可先測試檔案選取與管理。</span>
+      </div>
+    </div>
+
+    <footer class="import-modal-footer">
+      <button class="button" id="clearImportFilesBtn" type="button">清除全部檔案</button>
+      <div class="import-footer-actions">
+        <button class="button" id="cancelImportModalBtn" type="button">關閉</button>
+        <button class="button primary" id="startOcrBtn" type="button" disabled>開始辨識（開發中）</button>
+      </div>
+    </footer>
+  </section>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="./js/dataModel.js"></script>
@@ -346,5 +416,6 @@
 <script src="./js/compareSheetBudget.js"></script>
 <script src="./js/sideBarRenderer.js"></script>
 <script src="./js/script.js"></script>
+<script src="./js/documentImport.js"></script>
 </body>
 </html>
