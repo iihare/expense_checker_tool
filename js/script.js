@@ -1,6 +1,6 @@
 (() => {
   const $ = (id) => document.getElementById(id);
-  const expenseRows = [];
+  const expenseRows = window.appState.expenseItems;
   let nextId = 1;
   let checkedOnce = false;
   let isStale = false;
