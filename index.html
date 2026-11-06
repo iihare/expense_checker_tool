@@ -24,44 +24,6 @@
   </div>
 </header>
 
-<!-- 測試區 -->
-<div class="ocr-test">
-  <h3>OCR 暫時測試區</h3>
-
-  <input
-    type="file"
-    id="ocrTestFile"
-    accept=".pdf,.jpg,.jpeg,.png"
-  >
-
-  <button type="button" id="ocrTestButton">
-    開始辨識
-  </button>
-
-  <p id="ocrTestStatus"></p>
-
-  <pre id="ocrTestResult"></pre>
-</div>
-
-<div class="ocr-test">
-  <h3>PaddleOCR 測試區</h3>
-
-  <input
-    type="file"
-    id="paddleTestFile"
-    accept=".jpg,.jpeg,.png"
-  >
-
-  <button type="button" id="paddleTestButton">
-    開始辨識
-  </button>
-
-  <p id="paddleTestStatus"></p>
-
-  <pre id="paddleTestResult"></pre>
-</div>
-<!-- 測試區 -->
-
 <main class="main">
   <div class="page-top">
     <div>
@@ -449,8 +411,6 @@
 <!-- PDF.js：讀取 PDF 文件 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-<!-- Tesseract.js：OCR 文字辨識 -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <!-- 自訂 JavaScript -->
 <script src="./js/dataModel.js"></script>
@@ -462,8 +422,6 @@
 <script src="./js/sideBarRenderer.js"></script>
 <script src="./js/documentImport.js"></script>
 <script src="./js/expenseOCR.js"></script>
-<script type="module" src="./js/paddleOCR.js"></script>
-<script src="./js/paddleOCRTest.js"></script>
 <script src="./js/script.js"></script>
 </body>
 </html>
