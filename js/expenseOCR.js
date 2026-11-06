@@ -1,55 +1,93 @@
 // expenseOCR.js
-// PDF 文字擷取 + 圖片 OCR
+// PDF 文字擷取 + PaddleOCR 圖片辨識
+
 (() => {
   const PDF_WORKER_URL =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  const PADDLEOCR_URL =
+    "https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/+esm";
 
   // PDF.js worker 設定
   if (window.pdfjsLib) {
     window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
   }
 
+  // PaddleOCR 初始化 Promise
+  // 避免每張圖片都重新載入模型
+  let paddleOCRPromise = null;
+
   /**
-   * 建立 Tesseract OCR Worker
+   * 建立 PaddleOCR
    */
-  async function createOCRWorker(onProgress) {
-    if (!window.Tesseract) {
-      throw new Error("Tesseract.js 尚未載入，請檢查 index.html 的 script 順序。");
+  async function createOCR() {
+    if (!paddleOCRPromise) {
+      paddleOCRPromise = (async () => {
+        const { PaddleOCR } = await import(PADDLEOCR_URL);
+
+        const ocr = await PaddleOCR.create({
+          lang: "ch",
+          ocrVersion: "PP-OCRv5",
+          ortOptions: {
+            backend: "auto"
+          }
+        });
+
+        return ocr;
+      })().catch(error => {
+        // 初始化失敗時允許下次重新嘗試
+        paddleOCRPromise = null;
+        throw error;
+      });
     }
 
-    const worker = await window.Tesseract.createWorker(
-      "chi_tra+eng",
-      1,
-      {
-        logger: (message) => {
-          if (typeof onProgress === "function") {
-            onProgress(message);
-          }
-        }
-      }
-    );
-
-    await worker.setParameters({
-      preserve_interword_spaces: "1"
-    });
-
-    return worker;
+    return paddleOCRPromise;
   }
 
   /**
-   * 將 Canvas 交給 OCR 辨識
+   * 將 Canvas 交給 PaddleOCR 辨識
    */
-  async function recognizeCanvas(canvas, worker) {
-    const result = await worker.recognize(canvas);
-    const data = result.data;
+  async function recognizeCanvas(canvas, onProgress) {
+    if (typeof onProgress === "function") {
+      onProgress({
+        status: "recognizing text"
+      });
+    }
+
+    const ocr = await createOCR();
+
+    const [result] = await ocr.predict(canvas);
+
+    // 整理辨識結果
+    const items = (result.items || []).map(item => {
+      const poly = item.poly || [];
+
+      const xCoordinates = poly.map(point => point[0]);
+      const yCoordinates = poly.map(point => point[1]);
+
+      return {
+        text: item.text,
+        confidence: item.score,
+        score: item.score,
+        poly,
+
+        // 轉換成原本 Tesseract bbox 類似的格式
+        bbox: {
+          x0: Math.min(...xCoordinates),
+          y0: Math.min(...yCoordinates),
+          x1: Math.max(...xCoordinates),
+          y1: Math.max(...yCoordinates)
+        }
+      };
+    });
 
     return {
-      text: data.text || "",
-      words: (data.words || []).map((word) => ({
-        text: word.text,
-        confidence: word.confidence,
-        bbox: word.bbox
-      }))
+      text: items.map(item => item.text).join("\n"),
+      items,
+
+      // 暫時保留 words 名稱，避免其他舊程式讀取時出錯。
+      // 注意：PaddleOCR 回傳的是文字區塊，不一定是單一詞語。
+      words: items
     };
   }
 
@@ -57,10 +95,9 @@
    * 讀取圖片並執行 OCR
    */
   async function readImage(file, onProgress) {
-    const worker = await createOCRWorker(onProgress);
+    const bitmap = await createImageBitmap(file);
 
     try {
-      const bitmap = await createImageBitmap(file);
       const canvas = document.createElement("canvas");
 
       canvas.width = bitmap.width;
@@ -68,24 +105,26 @@
 
       const context = canvas.getContext("2d");
       context.drawImage(bitmap, 0, 0);
-      bitmap.close();
 
-      const result = await recognizeCanvas(canvas, worker);
+      const result = await recognizeCanvas(canvas, onProgress);
 
       return {
         fileName: file.name,
         fileType: "image",
+        totalPages: 1,
         pages: [
           {
             pageNumber: 1,
             source: "ocr",
             text: result.text,
+            items: result.items,
             words: result.words
           }
         ]
       };
+
     } finally {
-      await worker.terminate();
+      bitmap.close();
     }
   }
 
@@ -93,11 +132,13 @@
    * 讀取 PDF
    *
    * 有文字層：使用 PDF.js 擷取文字
-   * 沒有足夠文字：將該頁轉成圖片，再使用 OCR
+   * 沒有足夠文字：轉成 Canvas，再使用 PaddleOCR
    */
   async function readPDF(file, onProgress) {
     if (!window.pdfjsLib) {
-      throw new Error("PDF.js 尚未載入，請檢查 index.html 的 script 順序。");
+      throw new Error(
+        "PDF.js 尚未載入，請檢查 index.html 的 script 順序。"
+      );
     }
 
     const buffer = await file.arrayBuffer();
@@ -108,93 +149,89 @@
 
     const pages = [];
 
-    // 只有需要 OCR 的頁面才建立 Worker
-    let worker = null;
-
-    try {
-      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-        if (typeof onProgress === "function") {
-          onProgress({
-            status: "reading-page",
-            pageNumber,
-            totalPages: pdf.numPages
-          });
-        }
-
-        const page = await pdf.getPage(pageNumber);
-        const textContent = await page.getTextContent();
-
-        const textItems = (textContent.items || [])
-          .filter((item) => item.str && item.str.trim())
-          .map((item) => ({
-            text: item.str,
-            x: item.transform[4],
-            y: item.transform[5],
-            width: item.width,
-            height: item.height
-          }));
-
-        const pageText = textItems
-          .map((item) => item.text)
-          .join(" ");
-
-        // 文字層足夠時，先使用 PDF 原始文字
-        const hasTextLayer =
-          textItems.length >= 5 &&
-          pageText.trim().length >= 30;
-
-        if (hasTextLayer) {
-          pages.push({
-            pageNumber,
-            source: "pdf-text",
-            text: pageText,
-            textItems,
-            words: []
-          });
-
-          continue;
-        }
-
-        // 文字層不足時，改用 OCR
-        if (!worker) {
-          worker = await createOCRWorker(onProgress);
-        }
-
-        const viewport = page.getViewport({ scale: 2 });
-        const canvas = document.createElement("canvas");
-
-        canvas.width = Math.ceil(viewport.width);
-        canvas.height = Math.ceil(viewport.height);
-
-        const context = canvas.getContext("2d");
-
-        await page.render({
-          canvasContext: context,
-          viewport
-        }).promise;
-
-        const result = await recognizeCanvas(canvas, worker);
-
-        pages.push({
+    for (
+      let pageNumber = 1;
+      pageNumber <= pdf.numPages;
+      pageNumber++
+    ) {
+      if (typeof onProgress === "function") {
+        onProgress({
+          status: "reading-page",
           pageNumber,
-          source: "ocr",
-          text: result.text,
-          textItems: [],
-          words: result.words
+          totalPages: pdf.numPages
         });
       }
 
-      return {
-        fileName: file.name,
-        fileType: "pdf",
-        totalPages: pdf.numPages,
-        pages
-      };
-    } finally {
-      if (worker) {
-        await worker.terminate();
+      const page = await pdf.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+
+      const textItems = (textContent.items || [])
+        .filter(item => item.str && item.str.trim())
+        .map(item => ({
+          text: item.str,
+          x: item.transform[4],
+          y: item.transform[5],
+          width: item.width,
+          height: item.height
+        }));
+
+      const pageText = textItems
+        .map(item => item.text)
+        .join(" ");
+
+      // 文字層足夠時，直接使用 PDF 原始文字
+      const hasTextLayer =
+        textItems.length >= 5 &&
+        pageText.trim().length >= 30;
+
+      if (hasTextLayer) {
+        pages.push({
+          pageNumber,
+          source: "pdf-text",
+          text: pageText,
+          textItems,
+          items: [],
+          words: []
+        });
+
+        continue;
       }
+
+      // 文字層不足時，改用 PaddleOCR
+      const viewport = page.getViewport({
+        scale: 2
+      });
+
+      const canvas = document.createElement("canvas");
+
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+
+      const context = canvas.getContext("2d");
+
+      await page.render({
+        canvasContext: context,
+        viewport
+      }).promise;
+
+      const result = await recognizeCanvas(canvas, onProgress);
+
+      pages.push({
+        pageNumber,
+        source: "ocr",
+        text: result.text,
+        textItems: [],
+        items: result.items,
+        words: result.words
+      });
     }
+
+    return {
+      fileName: file.name,
+      fileType: "pdf",
+      totalPages: pdf.numPages,
+      pages
+    };
   }
 
   /**
@@ -207,7 +244,10 @@
 
     const fileName = file.name.toLowerCase();
 
-    if (file.type === "application/pdf" || fileName.endsWith(".pdf")) {
+    if (
+      file.type === "application/pdf" ||
+      fileName.endsWith(".pdf")
+    ) {
       return readPDF(file, onProgress);
     }
 
@@ -218,73 +258,14 @@
       return readImage(file, onProgress);
     }
 
-    throw new Error("目前只支援 PDF、JPG、JPEG、PNG 檔案。");
+    throw new Error(
+      "目前只支援 PDF、JPG、JPEG、PNG 檔案。"
+    );
   }
 
-  // 提供給其他 JS 檔案使用
+  // 對外提供
   window.ExpenseOCR = {
     readDocument
   };
 
-  // 暫時測試用
-  document.addEventListener("DOMContentLoaded", () => {
-    const fileInput = document.getElementById("ocrTestFile");
-    const button = document.getElementById("ocrTestButton");
-    const status = document.getElementById("ocrTestStatus");
-    const result = document.getElementById("ocrTestResult");
-  
-    if (!fileInput || !button) return;
-  
-    button.addEventListener("click", async () => {
-      const file = fileInput.files[0];
-  
-      if (!file) {
-        status.textContent = "請先選擇文件。";
-        return;
-      }
-  
-      button.disabled = true;
-      result.textContent = "";
-  
-      try {
-        const data = await window.ExpenseOCR.readDocument(
-          file,
-          (progress) => {
-            if (progress.status === "reading-page") {
-              status.textContent =
-                `正在讀取第 ${progress.pageNumber} / ${progress.totalPages} 頁`;
-            } else if (progress.status === "recognizing text") {
-              status.textContent =
-                `OCR 辨識中：${Math.round((progress.progress || 0) * 100)}%`;
-            }
-          }
-        );
-  
-        status.textContent = "辨識完成！";
-  
-        result.textContent = data.pages.map((page) => {
-          return [
-            `第 ${page.pageNumber} 頁（${page.source}）`,
-            page.text
-          ].join("\n");
-        }).join("\n\n--------------------\n\n");
-  
-        console.log("OCR 完整結果：", data);
-        console.table(data.pages.map((page) => ({
-          頁數: page.pageNumber,
-          辨識方式: page.source,
-          文字長度: page.text.length,
-          數字數量: (page.text.match(/[0-9０-９]/g) || []).length,
-          辨識文字: page.text
-        })));
-  
-      } catch (error) {
-        console.error(error);
-        status.textContent = `辨識失敗：${error.message}`;
-  
-      } finally {
-        button.disabled = false;
-      }
-    });
-  });
 })();
