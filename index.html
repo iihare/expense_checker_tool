@@ -42,6 +42,24 @@
 
   <pre id="ocrTestResult"></pre>
 </div>
+
+<div class="ocr-test">
+  <h3>PaddleOCR 測試區</h3>
+
+  <input
+    type="file"
+    id="paddleTestFile"
+    accept=".jpg,.jpeg,.png"
+  >
+
+  <button type="button" id="paddleTestButton">
+    開始辨識
+  </button>
+
+  <p id="paddleTestStatus"></p>
+
+  <pre id="paddleTestResult"></pre>
+</div>
 <!-- 測試區 -->
 
 <main class="main">
@@ -444,6 +462,8 @@
 <script src="./js/sideBarRenderer.js"></script>
 <script src="./js/documentImport.js"></script>
 <script src="./js/expenseOCR.js"></script>
+<script type="module" src="./js/paddleOCR.js"></script>
+<script src="./js/paddleOCRTest.js"></script>
 <script src="./js/script.js"></script>
 </body>
 </html>
