@@ -1,198 +1,228 @@
+// expenseOCR.js
+// PDF 文字擷取 + 圖片 OCR
 (() => {
-  "use strict";
+  const PDF_WORKER_URL =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-  const $ = (id) => document.getElementById(id);
-
-  const allowedExtensions = new Set(["pdf", "jpg", "jpeg", "png"]);
-
-  // 匯入檔案獨立保存，不放進 appState，也不直接改動表單或經費資料。
-  const documentState = {
-    applicationFiles: [],
-    expenseFiles: [],
-    isProcessing: false
-  };
-
-  window.documentImportState = documentState;
-
-  const getExtension = (fileName) => {
-    const parts = String(fileName || "").toLowerCase().split(".");
-    return parts.length > 1 ? parts.pop() : "";
-  };
-
-  const isSupportedFile = (file) => {
-    const extension = getExtension(file.name);
-    return allowedExtensions.has(extension) && file.size > 0;
-  };
-
-  const isDuplicate = (files, candidate) => files.some((file) =>
-    file.name === candidate.name &&
-    file.size === candidate.size &&
-    file.lastModified === candidate.lastModified
-  );
-
-  const formatCount = (count) => count > 0 ? `${count} 個檔案` : "尚未選擇";
-
-  function renderFileList(type) {
-    const isApplication = type === "application";
-    const files = isApplication
-      ? documentState.applicationFiles
-      : documentState.expenseFiles;
-    const list = $(isApplication ? "applicationFileList" : "expenseFileList");
-    const count = $(isApplication ? "applicationFileCount" : "expenseFileCount");
-
-    if (!list || !count) return;
-
-    count.textContent = formatCount(files.length);
-    list.replaceChildren();
-
-    if (files.length === 0) {
-      const empty = document.createElement("li");
-      empty.className = "import-empty-files";
-      empty.textContent = "尚未選擇檔案";
-      list.appendChild(empty);
-      return;
-    }
-
-    files.forEach((file, index) => {
-      const item = document.createElement("li");
-      item.className = "import-file-item";
-
-      const name = document.createElement("span");
-      name.className = "import-file-name";
-      name.textContent = file.name;
-      name.title = file.name;
-
-      const removeButton = document.createElement("button");
-      removeButton.className = "import-remove-file-btn";
-      removeButton.type = "button";
-      removeButton.textContent = "移除";
-      removeButton.setAttribute("aria-label", `移除檔案：${file.name}`);
-      removeButton.addEventListener("click", () => {
-        files.splice(index, 1);
-        renderFileList(type);
-      });
-
-      item.append(name, removeButton);
-      list.appendChild(item);
-    });
+  // PDF.js worker 設定
+  if (window.pdfjsLib) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
   }
 
-  function addSelectedFiles(type, selectedFiles) {
-    const files = type === "application"
-      ? documentState.applicationFiles
-      : documentState.expenseFiles;
+  /**
+   * 建立 Tesseract OCR Worker
+   */
+  async function createOCRWorker(onProgress) {
+    if (!window.Tesseract) {
+      throw new Error("Tesseract.js 尚未載入，請檢查 index.html 的 script 順序。");
+    }
 
-    let addedCount = 0;
-    let unsupportedCount = 0;
-    let duplicateCount = 0;
-
-    Array.from(selectedFiles).forEach((file) => {
-      if (!isSupportedFile(file)) {
-        unsupportedCount += 1;
-        return;
+    const worker = await window.Tesseract.createWorker(
+      "chi_tra+eng",
+      1,
+      {
+        logger: (message) => {
+          if (typeof onProgress === "function") {
+            onProgress(message);
+          }
+        }
       }
+    );
 
-      if (isDuplicate(files, file)) {
-        duplicateCount += 1;
-        return;
-      }
-
-      files.push(file);
-      addedCount += 1;
+    await worker.setParameters({
+      preserve_interword_spaces: "1"
     });
 
-    renderFileList(type);
+    return worker;
+  }
 
-    const messages = [];
-    if (addedCount) messages.push(`已加入 ${addedCount} 個檔案`);
-    if (duplicateCount) messages.push(`略過 ${duplicateCount} 個重複檔案`);
-    if (unsupportedCount) messages.push(`略過 ${unsupportedCount} 個不支援或空白檔案`);
+  /**
+   * 將 Canvas 交給 OCR 辨識
+   */
+  async function recognizeCanvas(canvas, worker) {
+    const result = await worker.recognize(canvas);
+    const data = result.data;
 
-    const notice = $("importNotice");
-    if (notice && messages.length) {
-      const detail = document.createElement("span");
-      detail.textContent = messages.join("；");
-      const oldDetail = notice.querySelector(".import-selection-feedback");
-      if (oldDetail) oldDetail.remove();
-      detail.className = "import-selection-feedback";
-      notice.appendChild(detail);
+    return {
+      text: data.text || "",
+      words: (data.words || []).map((word) => ({
+        text: word.text,
+        confidence: word.confidence,
+        bbox: word.bbox
+      }))
+    };
+  }
+
+  /**
+   * 讀取圖片並執行 OCR
+   */
+  async function readImage(file, onProgress) {
+    const worker = await createOCRWorker(onProgress);
+
+    try {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+
+      const context = canvas.getContext("2d");
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+
+      const result = await recognizeCanvas(canvas, worker);
+
+      return {
+        fileName: file.name,
+        fileType: "image",
+        pages: [
+          {
+            pageNumber: 1,
+            source: "ocr",
+            text: result.text,
+            words: result.words
+          }
+        ]
+      };
+    } finally {
+      await worker.terminate();
     }
   }
 
-  function openImportModal() {
-    const backdrop = $("importModalBackdrop");
-    if (!backdrop) return;
-    backdrop.classList.add("open");
-    backdrop.setAttribute("aria-hidden", "false");
-    document.body.classList.add("modal-open");
-    $("closeImportModalBtn")?.focus();
-  }
+  /**
+   * 讀取 PDF
+   *
+   * 有文字層：使用 PDF.js 擷取文字
+   * 沒有足夠文字：將該頁轉成圖片，再使用 OCR
+   */
+  async function readPDF(file, onProgress) {
+    if (!window.pdfjsLib) {
+      throw new Error("PDF.js 尚未載入，請檢查 index.html 的 script 順序。");
+    }
 
-  function closeImportModal() {
-    if (documentState.isProcessing) return;
-    const backdrop = $("importModalBackdrop");
-    if (!backdrop) return;
-    backdrop.classList.remove("open");
-    backdrop.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("modal-open");
-    $("importFilesBtn")?.focus();
-  }
+    const buffer = await file.arrayBuffer();
 
-  function clearAllFiles() {
-    if (documentState.isProcessing) return;
+    const pdf = await window.pdfjsLib.getDocument({
+      data: new Uint8Array(buffer)
+    }).promise;
 
-    documentState.applicationFiles = [];
-    documentState.expenseFiles = [];
+    const pages = [];
 
-    const applicationInput = $("applicationFilesInput");
-    const expenseInput = $("expenseFilesInput");
-    if (applicationInput) applicationInput.value = "";
-    if (expenseInput) expenseInput.value = "";
+    // 只有需要 OCR 的頁面才建立 Worker
+    let worker = null;
 
-    renderFileList("application");
-    renderFileList("expense");
+    try {
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        if (typeof onProgress === "function") {
+          onProgress({
+            status: "reading-page",
+            pageNumber,
+            totalPages: pdf.numPages
+          });
+        }
 
-    const notice = $("importNotice");
-    if (notice) {
-      const feedback = notice.querySelector(".import-selection-feedback");
-      if (feedback) feedback.remove();
+        const page = await pdf.getPage(pageNumber);
+        const textContent = await page.getTextContent();
+
+        const textItems = (textContent.items || [])
+          .filter((item) => item.str && item.str.trim())
+          .map((item) => ({
+            text: item.str,
+            x: item.transform[4],
+            y: item.transform[5],
+            width: item.width,
+            height: item.height
+          }));
+
+        const pageText = textItems
+          .map((item) => item.text)
+          .join(" ");
+
+        // 文字層足夠時，先使用 PDF 原始文字
+        const hasTextLayer =
+          textItems.length >= 5 &&
+          pageText.trim().length >= 30;
+
+        if (hasTextLayer) {
+          pages.push({
+            pageNumber,
+            source: "pdf-text",
+            text: pageText,
+            textItems,
+            words: []
+          });
+
+          continue;
+        }
+
+        // 文字層不足時，改用 OCR
+        if (!worker) {
+          worker = await createOCRWorker(onProgress);
+        }
+
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement("canvas");
+
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+
+        const context = canvas.getContext("2d");
+
+        await page.render({
+          canvasContext: context,
+          viewport
+        }).promise;
+
+        const result = await recognizeCanvas(canvas, worker);
+
+        pages.push({
+          pageNumber,
+          source: "ocr",
+          text: result.text,
+          textItems: [],
+          words: result.words
+        });
+      }
+
+      return {
+        fileName: file.name,
+        fileType: "pdf",
+        totalPages: pdf.numPages,
+        pages
+      };
+    } finally {
+      if (worker) {
+        await worker.terminate();
+      }
     }
   }
 
-  function initialize() {
-    $("importFilesBtn")?.addEventListener("click", openImportModal);
-    $("closeImportModalBtn")?.addEventListener("click", closeImportModal);
-    $("cancelImportModalBtn")?.addEventListener("click", closeImportModal);
-    $("clearImportFilesBtn")?.addEventListener("click", clearAllFiles);
+  /**
+   * 對外提供的文件讀取入口
+   */
+  async function readDocument(file, onProgress) {
+    if (!file) {
+      throw new Error("請先選擇文件。");
+    }
 
-    $("applicationFilesInput")?.addEventListener("change", (event) => {
-      addSelectedFiles("application", event.target.files || []);
-      // 清空 input，讓使用者之後仍可再次選取同一個檔案。
-      event.target.value = "";
-    });
+    const fileName = file.name.toLowerCase();
 
-    $("expenseFilesInput")?.addEventListener("change", (event) => {
-      addSelectedFiles("expense", event.target.files || []);
-      event.target.value = "";
-    });
+    if (file.type === "application/pdf" || fileName.endsWith(".pdf")) {
+      return readPDF(file, onProgress);
+    }
 
-    $("importModalBackdrop")?.addEventListener("click", (event) => {
-      if (event.target === event.currentTarget) closeImportModal();
-    });
+    if (
+      file.type.startsWith("image/") ||
+      /\.(jpg|jpeg|png)$/i.test(fileName)
+    ) {
+      return readImage(file, onProgress);
+    }
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && $("importModalBackdrop")?.classList.contains("open")) {
-        closeImportModal();
-      }
-    });
-
-    renderFileList("application");
-    renderFileList("expense");
+    throw new Error("目前只支援 PDF、JPG、JPEG、PNG 檔案。");
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initialize, { once: true });
-  } else {
-    initialize();
-  }
+  // 提供給其他 JS 檔案使用
+  window.ExpenseOCR = {
+    readDocument
+  };
 })();
