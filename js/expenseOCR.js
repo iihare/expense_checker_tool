@@ -225,4 +225,59 @@
   window.ExpenseOCR = {
     readDocument
   };
+
+  // 暫時測試用
+  document.addEventListener("DOMContentLoaded", () => {
+    const fileInput = document.getElementById("ocrTestFile");
+    const button = document.getElementById("ocrTestButton");
+    const status = document.getElementById("ocrTestStatus");
+    const result = document.getElementById("ocrTestResult");
+  
+    if (!fileInput || !button) return;
+  
+    button.addEventListener("click", async () => {
+      const file = fileInput.files[0];
+  
+      if (!file) {
+        status.textContent = "請先選擇文件。";
+        return;
+      }
+  
+      button.disabled = true;
+      result.textContent = "";
+  
+      try {
+        const data = await window.ExpenseOCR.readDocument(
+          file,
+          (progress) => {
+            if (progress.status === "reading-page") {
+              status.textContent =
+                `正在讀取第 ${progress.pageNumber} / ${progress.totalPages} 頁`;
+            } else if (progress.status === "recognizing text") {
+              status.textContent =
+                `OCR 辨識中：${Math.round((progress.progress || 0) * 100)}%`;
+            }
+          }
+        );
+  
+        status.textContent = "辨識完成！";
+  
+        result.textContent = data.pages.map((page) => {
+          return [
+            `第 ${page.pageNumber} 頁（${page.source}）`,
+            page.text
+          ].join("\n");
+        }).join("\n\n--------------------\n\n");
+  
+        console.log("OCR 完整結果：", data);
+  
+      } catch (error) {
+        console.error(error);
+        status.textContent = `辨識失敗：${error.message}`;
+  
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
 })();
