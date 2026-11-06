@@ -270,6 +270,13 @@
         }).join("\n\n--------------------\n\n");
   
         console.log("OCR 完整結果：", data);
+        console.table(data.pages.map((page) => ({
+          頁數: page.pageNumber,
+          辨識方式: page.source,
+          文字長度: page.text.length,
+          數字數量: (page.text.match(/[0-9０-９]/g) || []).length,
+          辨識文字: page.text
+        })));
   
       } catch (error) {
         console.error(error);
