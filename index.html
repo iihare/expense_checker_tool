@@ -463,6 +463,19 @@ document.getElementById("ocrTestButton").addEventListener("click", async () => {
     const result = await ExpenseOCR.readDocument(file);
 
     console.log("OCR 原始結果：", result);
+    console.table(
+      result.pages[0].items.map(item => {
+        const xs = item.poly.map(p => p[0]);
+        const ys = item.poly.map(p => p[1]);
+    
+        return {
+          text: item.text,
+          score: item.score,
+          x: Math.round((Math.min(...xs) + Math.max(...xs)) / 2),
+          y: Math.round((Math.min(...ys) + Math.max(...ys)) / 2)
+        };
+      })
+    );
 
     // 第二步：執行解析器
     const parsed = ExpenseOCRParser.parsePage(result.pages[0]);
