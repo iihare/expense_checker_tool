@@ -291,6 +291,51 @@
     );
   }
 
+  // 取得頁面尺寸
+  function getPageDimensions(page, items) {
+    return {
+      width:
+        Number(page.width) ||
+        Math.max(...items.map(item => item.x1)),
+  
+      height:
+        Number(page.height) ||
+        Math.max(...items.map(item => item.y1))
+    };
+  }
+  
+  
+  // 將第一頁的表頭位置換算成目前頁面的座標
+  function scaleHeaderToPage(header, page, items) {
+    const { width, height } = getPageDimensions(page, items);
+  
+    const scaleX = width / header.referenceWidth;
+    const scaleY = height / header.referenceHeight;
+  
+    const centers = {};
+  
+    for (const [field, x] of Object.entries(header.centers)) {
+      centers[field] = x * scaleX;
+    }
+  
+    const sortedFields = header.sortedFields.map(item => ({
+      field: item.field,
+      x: item.x * scaleX
+    }));
+  
+    const boundaries = header.boundaries.map(
+      boundary => boundary * scaleX
+    );
+  
+    return {
+      success: true,
+      centers,
+      headerY: header.headerY * scaleY,
+      sortedFields,
+      boundaries
+    };
+  }
+
   function parsePage(page, options = {}) {
     const items = normalizeItems(page.items || []);
   
@@ -470,7 +515,14 @@
       rows,
       header: {
         centers: header.centers,
-        headerY: header.headerY
+        headerY: header.headerY,
+        boundaries: header.boundaries,
+        sortedFields: header.sortedFields,
+    
+        // 保留建立表頭時的頁面尺寸，
+        // 供後續頁面換算欄位位置使用。
+        referenceWidth: Number(page.width) || Math.max(...items.map(item => item.x1)),
+        referenceHeight: Number(page.height) || Math.max(...items.map(item => item.y1))
       },
       message: `解析完成，共取得 ${rows.length} 筆候選經費資料。`
     };
