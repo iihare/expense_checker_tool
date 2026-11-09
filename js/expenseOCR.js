@@ -113,14 +113,16 @@
         fileType: "image",
         totalPages: 1,
         pages: [
-          {
-            pageNumber: 1,
-            source: "ocr",
-            text: result.text,
-            items: result.items,
-            words: result.words
-          }
-        ]
+        {
+          pageNumber: 1,
+          source: "ocr",
+          width: bitmap.width,
+          height: bitmap.height,
+          text: result.text,
+          items: result.items,
+          words: result.words
+        }
+      ]
       };
 
     } finally {
@@ -219,12 +221,13 @@
       pages.push({
         pageNumber,
         source: "ocr",
+        width: canvas.width,
+        height: canvas.height,
         text: result.text,
         textItems: [],
         items: result.items,
         words: result.words
       });
-    }
 
     return {
       fileName: file.name,
