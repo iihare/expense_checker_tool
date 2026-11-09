@@ -293,7 +293,7 @@
 
   function parsePage(page, options = {}) {
     const items = normalizeItems(page.items || []);
-
+  
     if (!items.length) {
       return {
         success: false,
@@ -301,8 +301,12 @@
         rows: []
       };
     }
-
-    const header = findHeaderAnchors(items);
+  
+    // 優先使用外部提供的表頭資訊；
+    // 沒有提供時，才自行尋找表頭。
+    const header = options.header
+      ? options.header
+      : findHeaderAnchors(items);
 
     if (!header.success) {
       return {
