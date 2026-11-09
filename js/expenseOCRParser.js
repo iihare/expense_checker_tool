@@ -32,6 +32,7 @@
       .replace(/\s+/g, "")
       .replace(/[，,]/g, "")
       .replace(/預算金额/g, "預算金額")
+      .replace(/预/g, "預")
       .replace(/金额/g, "金額")
       .replace(/经费/g, "經費")
       .replace(/申请/g, "申請")
