@@ -528,7 +528,135 @@
     };
   }
 
+  // 解析整份文件（支援多頁 PDF）
+  function parseDocument(documentData) {
+    const pages = documentData?.pages || [];
+  
+    if (!pages.length) {
+      return {
+        success: false,
+        rows: [],
+        pageResults: [],
+        message: "文件中沒有可供解析的頁面。"
+      };
+    }
+  
+    const allRows = [];
+    const pageResults = [];
+  
+    // 保存最近一次成功辨識的表頭資訊
+    let sharedHeader = null;
+  
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      const pageNumber = page.pageNumber || i + 1;
+  
+      const items = normalizeItems(page.items || []);
+  
+      // 沒有 OCR 文字，記錄失敗並繼續下一頁
+      if (!items.length) {
+        pageResults.push({
+          pageNumber,
+          success: false,
+          rowCount: 0,
+          message: "這一頁沒有可供解析的 OCR 文字。"
+        });
+  
+        continue;
+      }
+  
+      // 優先檢查目前頁面是否有自己的完整表頭
+      const detectedHeader = findHeaderAnchors(items);
+  
+      let headerToUse;
+  
+      if (detectedHeader.success) {
+        // 有完整表頭時，使用目前頁面的表頭
+        const dimensions = getPageDimensions(page, items);
+  
+        headerToUse = {
+          ...detectedHeader,
+          referenceWidth: dimensions.width,
+          referenceHeight: dimensions.height
+        };
+  
+        // 更新共用表頭
+        sharedHeader = headerToUse;
+  
+      } else if (sharedHeader) {
+        // 沒有表頭時，沿用上一個有效表頭
+        headerToUse = scaleHeaderToPage(
+          sharedHeader,
+          page,
+          items
+        );
+  
+      } else {
+        // 尚未找到任何有效表頭
+        pageResults.push({
+          pageNumber,
+          success: false,
+          rowCount: 0,
+          message: "尚未找到可供參考的完整經費表表頭。",
+          missingHeaders: detectedHeader.missing
+        });
+  
+        continue;
+      }
+  
+      // 使用目前頁面的表頭資訊解析明細
+      const parsed = parsePage(page, {
+        header: headerToUse
+      });
+  
+      if (!parsed.success) {
+        pageResults.push({
+          pageNumber,
+          success: false,
+          rowCount: 0,
+          message: parsed.message,
+          missingHeaders: parsed.missingHeaders || []
+        });
+  
+        continue;
+      }
+  
+      // 更新共用表頭，確保後續頁面以最新頁面尺寸為基準
+      sharedHeader = parsed.header;
+  
+      // 合併該頁的經費資料
+      const pageRows = parsed.rows.map(row => ({
+        ...row,
+        sourceFile: documentData.fileName || "",
+        sourcePage: pageNumber
+      }));
+  
+      allRows.push(...pageRows);
+  
+      pageResults.push({
+        pageNumber,
+        success: true,
+        rowCount: pageRows.length,
+        message: parsed.message
+      });
+    }
+  
+    const success = allRows.length > 0;
+  
+    return {
+      success,
+      fileName: documentData.fileName || "",
+      totalPages: pages.length,
+      rows: allRows,
+      pageResults,
+      message: success
+        ? `文件解析完成，共取得 ${allRows.length} 筆候選經費資料。`
+        : "文件解析失敗，沒有取得任何經費資料。"
+    };
+  }
+
   window.ExpenseOCRParser = {
-    parsePage
+    parsePage,
+    parseDocument
   };
 })();
