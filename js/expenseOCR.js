@@ -268,7 +268,7 @@
     readDocument
   };
   
-  document.addEventListener("DOMContentLoaded", () => {
+  /*document.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("ocrTestFile");
   const button = document.getElementById("ocrTestButton");
   const status = document.getElementById("ocrTestStatus");
@@ -320,6 +320,6 @@
       button.disabled = false;
     }
   });
-});
+});*/
 
 })();
