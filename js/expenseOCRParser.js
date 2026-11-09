@@ -444,6 +444,22 @@
         !/^[\d,.$￥]+$/.test(item.text.replace(/\s/g, ""))
       )
       .sort((a, b) => a.cy - b.cy);
+
+    // 計算相鄰數字列的最小垂直間距
+    const rowGaps = numberRows
+      .slice(1)
+      .map((row, index) =>
+        row.cy - numberRows[index].cy
+      );
+    
+    const minRowGap = rowGaps.length
+      ? Math.min(...rowGaps)
+      : 84;
+    
+    // 依照數字列間距動態決定文字分組距離
+    const maxTextGap = Math.min(40, minRowGap * 0.48);
+    
+    console.log("文字分組最大距離：", maxTextGap);
     
     // 將垂直距離接近的文字視為同一個文字區塊
     const textBlocks = [];
@@ -451,7 +467,7 @@
     for (const item of itemTextCandidates) {
       let block = textBlocks.find(candidate => {
         const lastItem = candidate[candidate.length - 1];
-        return Math.abs(item.cy - lastItem.cy) <= 40;
+        return Math.abs(item.cy - lastItem.cy) <= maxTextGap;
       });
     
       if (!block) {
