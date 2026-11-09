@@ -252,7 +252,9 @@
         ...row,
         sourceFile: pageSourceFiles[row.sourcePage] || ""
       }));
-  
+
+      window.importExpenseRows(documentState.parsedExpenseRows);
+      
       const totalRows = documentState.parsedExpenseRows.length;
   
       let message =
