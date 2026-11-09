@@ -241,9 +241,9 @@
     return Number.isFinite(value) ? value : null;
   }
 
-  function groupNumberRows(items, headerY) {
+  function groupNumberRows(items, headerY, ignoreHeaderY = false) {
     const numericItems = items.filter(item => {
-      if (item.cy <= headerY) return false;
+      if (!ignoreHeaderY && item.cy <= headerY) return false;
 
       // 只將純數字或金額文字視為數字欄位候選。
       return /^[\$￥]?\s*[\d,]+(?:\.\d+)?\s*元?$/.test(
@@ -387,7 +387,8 @@
     // 只保留總經費區域之前的明細數字列
     const numberRows = groupNumberRows(
       items,
-      header.headerY
+      header.headerY,
+      options.ignoreHeaderY === true
     ).filter(row => row.cy < summaryY);
     
     //暫時加入由此
@@ -421,7 +422,7 @@
 
     // 推估經費項目與單位欄的分界
     const possibleItemTexts = items.filter(item =>
-      item.cy > header.headerY &&
+      (options.ignoreHeaderY === true || item.cy > header.headerY) &&
       item.cx < header.centers.unitPrice &&
       !/^[\d,.$￥]+$/.test(item.text.replace(/\s/g, ""))
     );
@@ -602,6 +603,7 @@
   
     // 保存最近一次成功辨識的表頭資訊
     let sharedHeader = null;
+    let isContinuationPage = false;
   
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
@@ -646,6 +648,8 @@
           page,
           items
         );
+      
+        isContinuationPage = true;
   
       } else {
         // 尚未找到任何有效表頭
@@ -662,7 +666,8 @@
   
       // 使用目前頁面的表頭資訊解析明細
       const parsed = parsePage(page, {
-        header: headerToUse
+        header: headerToUse,
+        ignoreHeaderY: isContinuationPage
       });
   
       if (!parsed.success) {
