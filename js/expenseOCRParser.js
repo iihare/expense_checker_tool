@@ -32,13 +32,15 @@
       .replace(/\s+/g, "")
       .replace(/[，,]/g, "")
       .replace(/預算金额/g, "預算金額")
-      .replace(/预/g, "預")
       .replace(/金额/g, "金額")
       .replace(/经费/g, "經費")
       .replace(/申请/g, "申請")
       .replace(/补助/g, "補助")
       .replace(/单价/g, "單價")
-      .replace(/数量/g, "數量");
+      .replace(/数量/g, "數量")
+      .replace(/预/g, "預")
+      .replace(/费/g, "費")
+      .replace(/录/g, "錄");
   }
 
   function getBox(item) {
