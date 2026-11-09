@@ -82,19 +82,23 @@
 
   function findHeaderAnchors(items) {
     const candidates = {};
-
+  
     for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
       candidates[field] = items.filter(item => {
         const text = normalizeText(item.text);
-        return aliases.some(alias => text.includes(normalizeText(alias)));
+  
+        return aliases.some(alias =>
+          text.includes(normalizeText(alias))
+        );
       });
     }
-
-    // 優先使用「本要點」辨識補助欄，避免和他機關補助混淆。
+  
+    // 本要點欄位只採用包含「本要點」的文字，
+    // 避免和其他補助欄位混淆。
     candidates.grant = items.filter(item =>
       normalizeText(item.text).includes("本要點")
     );
-
+  
     const requiredFields = [
       "unitPrice",
       "quantity",
@@ -104,11 +108,11 @@
       "self",
       "other"
     ];
-
+  
     const missing = requiredFields.filter(
       field => !candidates[field].length
     );
-
+  
     if (missing.length) {
       return {
         success: false,
@@ -116,41 +120,103 @@
         candidates
       };
     }
-
-    const headerItems = requiredFields.flatMap(
-      field => candidates[field]
+  
+    // 找出最可能的表頭高度。
+    // 每個候選位置都作為一次參考，統計附近能對應到幾個欄位。
+    const HEADER_TOLERANCE = 35;
+  
+    const possibleYs = requiredFields.flatMap(field =>
+      candidates[field].map(item => item.cy)
     );
-
+  
+    let bestHeader = null;
+  
+    for (const y of possibleYs) {
+      const matched = {};
+      let matchedCount = 0;
+      let totalDistance = 0;
+  
+      for (const field of requiredFields) {
+        const nearest = candidates[field]
+          .slice()
+          .sort(
+            (a, b) =>
+              Math.abs(a.cy - y) - Math.abs(b.cy - y)
+          )[0];
+  
+        const distance = Math.abs(nearest.cy - y);
+  
+        if (distance <= HEADER_TOLERANCE) {
+          matched[field] = nearest;
+          matchedCount++;
+          totalDistance += distance;
+        }
+      }
+  
+      // 優先選擇能辨識最多欄位的高度；
+      // 欄位數相同時，選擇垂直距離總和較小者。
+      if (
+        !bestHeader ||
+        matchedCount > bestHeader.matchedCount ||
+        (
+          matchedCount === bestHeader.matchedCount &&
+          totalDistance < bestHeader.totalDistance
+        )
+      ) {
+        bestHeader = {
+          matched,
+          matchedCount,
+          totalDistance
+        };
+      }
+    }
+  
+    // 必須找到全部七個欄位，才接受這個表頭。
+    if (
+      !bestHeader ||
+      bestHeader.matchedCount !== requiredFields.length
+    ) {
+      return {
+        success: false,
+        missing: requiredFields.filter(
+          field => !bestHeader?.matched[field]
+        ),
+        candidates
+      };
+    }
+  
+    const centers = {};
+    const headerItems = [];
+  
+    for (const field of requiredFields) {
+      const nearest = bestHeader.matched[field];
+  
+      centers[field] = nearest.cx;
+      headerItems.push(nearest);
+    }
+  
+    // 使用七個欄位代表文字的平均高度。
     const headerY =
       headerItems.reduce((sum, item) => sum + item.cy, 0) /
       headerItems.length;
-
-    const centers = {};
-
-    for (const field of requiredFields) {
-      const nearest = candidates[field]
-        .slice()
-        .sort(
-          (a, b) =>
-            Math.abs(a.cy - headerY) - Math.abs(b.cy - headerY)
-        )[0];
-
-      centers[field] = nearest.cx;
-    }
-
-    // 所有欄位中心依 X 座標排序，取相鄰欄位中點作為欄位邊界。
+  
+    // 所有欄位中心依 X 座標排序，
+    // 取相鄰欄位中點作為欄位邊界。
     const sortedFields = requiredFields
-      .map(field => ({ field, x: centers[field] }))
+      .map(field => ({
+        field,
+        x: centers[field]
+      }))
       .sort((a, b) => a.x - b.x);
-
+  
     const boundaries = [];
-
+  
     for (let i = 0; i < sortedFields.length - 1; i++) {
       boundaries.push(
         (sortedFields[i].x + sortedFields[i + 1].x) / 2
       );
     }
-
+  
     return {
       success: true,
       headerY,
@@ -245,7 +311,21 @@
       };
     }
 
-    const numberRows = groupNumberRows(items, header.headerY);
+    //const numberRows = groupNumberRows(items, header.headerY);
+    // 找出經費表下方的總經費區域
+    const summaryItems = items.filter(item =>
+      /活動總經費/.test(normalizeText(item.text))
+    );
+    
+    const summaryY = summaryItems.length
+      ? Math.min(...summaryItems.map(item => item.cy))
+      : Infinity;
+    
+    // 只保留總經費區域之前的明細數字列
+    const numberRows = groupNumberRows(
+      items,
+      header.headerY
+    ).filter(row => row.cy < summaryY);
 
     if (!numberRows.length) {
       return {
