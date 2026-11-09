@@ -281,12 +281,20 @@ function formatFieldValue(field) {
       $("expenseItem").focus();
       return;
     }
-    const row = { id: Number($("expenseForm").dataset.editingId) || nextId++ };
+    //const row = { id: Number($("expenseForm").dataset.editingId) || nextId++ };
+    const editingId = Number($("expenseForm").dataset.editingId);
+    const existingRow = editingId
+      ? expenseRows.find(item => item.id === editingId)
+      : null;
+    
+    const row = existingRow
+      ? { ...existingRow }
+      : { id: nextId++ };
     expenseFields.forEach(([fieldId, key]) => {
       const value = $(fieldId).value;
       row[key] = key === "item" ? value : numericValue(value);
     });
-    const editingId = Number($("expenseForm").dataset.editingId);
+    //const editingId = Number($("expenseForm").dataset.editingId);
     if (editingId) {
       const index = expenseRows.findIndex(item => item.id === editingId);
       if (index >= 0) expenseRows[index] = row;
