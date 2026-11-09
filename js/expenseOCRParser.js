@@ -1,198 +1,395 @@
+
 (() => {
-  "use strict";
+  const STANDARD_ITEMS = [
+    "場地費",
+    "場地布置費",
+    "設備使用或租借費",
+    "書籍資料及文宣品印刷費",
+    "鐘點費",
+    "出席費",
+    "裁判費",
+    "租車費",
+    "交通費",
+    "住宿費",
+    "報名費",
+    "保險費"
+  ];
 
-  const $ = (id) => document.getElementById(id);
-
-  const allowedExtensions = new Set(["pdf", "jpg", "jpeg", "png"]);
-
-  // 匯入檔案獨立保存，不放進 appState，也不直接改動表單或經費資料。
-  const documentState = {
-    applicationFiles: [],
-    expenseFiles: [],
-    isProcessing: false
+  const FIELD_ALIASES = {
+    unitPrice: ["單價"],
+    quantity: ["數量"],
+    budget: ["預算金額"],
+    grant: ["本要點", "本要點補助"],
+    agency: ["他機關補助", "他機關"],
+    self: ["自付經費", "自付"],
+    other: ["其他"]
   };
 
-  window.documentImportState = documentState;
+  const MIN_CONFIDENCE = 0.75;
 
-  const getExtension = (fileName) => {
-    const parts = String(fileName || "").toLowerCase().split(".");
-    return parts.length > 1 ? parts.pop() : "";
-  };
+  function normalizeText(text) {
+    return String(text || "")
+      .replace(/\s+/g, "")
+      .replace(/[，,]/g, "")
+      .replace(/預算金额/g, "預算金額")
+      .replace(/金额/g, "金額")
+      .replace(/经费/g, "經費")
+      .replace(/申请/g, "申請")
+      .replace(/补助/g, "補助")
+      .replace(/单价/g, "單價")
+      .replace(/数量/g, "數量");
+  }
 
-  const isSupportedFile = (file) => {
-    const extension = getExtension(file.name);
-    return allowedExtensions.has(extension) && file.size > 0;
-  };
-
-  const isDuplicate = (files, candidate) => files.some((file) =>
-    file.name === candidate.name &&
-    file.size === candidate.size &&
-    file.lastModified === candidate.lastModified
-  );
-
-  const formatCount = (count) => count > 0 ? `${count} 個檔案` : "尚未選擇";
-
-  function renderFileList(type) {
-    const isApplication = type === "application";
-    const files = isApplication
-      ? documentState.applicationFiles
-      : documentState.expenseFiles;
-    const list = $(isApplication ? "applicationFileList" : "expenseFileList");
-    const count = $(isApplication ? "applicationFileCount" : "expenseFileCount");
-
-    if (!list || !count) return;
-
-    count.textContent = formatCount(files.length);
-    list.replaceChildren();
-
-    if (files.length === 0) {
-      const empty = document.createElement("li");
-      empty.className = "import-empty-files";
-      empty.textContent = "尚未選擇檔案";
-      list.appendChild(empty);
-      return;
+  function getBox(item) {
+    if (item.bbox) {
+      const { x0, y0, x1, y1 } = item.bbox;
+      return { x0, y0, x1, y1 };
     }
 
-    files.forEach((file, index) => {
-      const item = document.createElement("li");
-      item.className = "import-file-item";
+    if (Array.isArray(item.poly) && item.poly.length) {
+      const xs = item.poly.map(point => point[0]);
+      const ys = item.poly.map(point => point[1]);
 
-      const name = document.createElement("span");
-      name.className = "import-file-name";
-      name.textContent = file.name;
-      name.title = file.name;
+      return {
+        x0: Math.min(...xs),
+        y0: Math.min(...ys),
+        x1: Math.max(...xs),
+        y1: Math.max(...ys)
+      };
+    }
 
-      const removeButton = document.createElement("button");
-      removeButton.className = "import-remove-file-btn";
-      removeButton.type = "button";
-      removeButton.textContent = "移除";
-      removeButton.setAttribute("aria-label", `移除檔案：${file.name}`);
-      removeButton.addEventListener("click", () => {
-        files.splice(index, 1);
-        renderFileList(type);
+    return null;
+  }
+
+  function normalizeItems(items) {
+    return (items || [])
+      .map(item => {
+        const box = getBox(item);
+        if (!box) return null;
+
+        return {
+          text: String(item.text || "").trim(),
+          confidence: Number(item.confidence ?? item.score ?? 0),
+          ...box,
+          cx: (box.x0 + box.x1) / 2,
+          cy: (box.y0 + box.y1) / 2,
+          height: box.y1 - box.y0
+        };
+      })
+      .filter(item => item && item.text);
+  }
+
+  function findHeaderAnchors(items) {
+    const candidates = {};
+
+    for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
+      candidates[field] = items.filter(item => {
+        const text = normalizeText(item.text);
+        return aliases.some(alias => text.includes(normalizeText(alias)));
       });
-
-      item.append(name, removeButton);
-      list.appendChild(item);
-    });
-  }
-
-  function addSelectedFiles(type, selectedFiles) {
-    const files = type === "application"
-      ? documentState.applicationFiles
-      : documentState.expenseFiles;
-
-    let addedCount = 0;
-    let unsupportedCount = 0;
-    let duplicateCount = 0;
-
-    Array.from(selectedFiles).forEach((file) => {
-      if (!isSupportedFile(file)) {
-        unsupportedCount += 1;
-        return;
-      }
-
-      if (isDuplicate(files, file)) {
-        duplicateCount += 1;
-        return;
-      }
-
-      files.push(file);
-      addedCount += 1;
-    });
-
-    renderFileList(type);
-
-    const messages = [];
-    if (addedCount) messages.push(`已加入 ${addedCount} 個檔案`);
-    if (duplicateCount) messages.push(`略過 ${duplicateCount} 個重複檔案`);
-    if (unsupportedCount) messages.push(`略過 ${unsupportedCount} 個不支援或空白檔案`);
-
-    const notice = $("importNotice");
-    if (notice && messages.length) {
-      const detail = document.createElement("span");
-      detail.textContent = messages.join("；");
-      const oldDetail = notice.querySelector(".import-selection-feedback");
-      if (oldDetail) oldDetail.remove();
-      detail.className = "import-selection-feedback";
-      notice.appendChild(detail);
     }
-  }
 
-  function openImportModal() {
-    const backdrop = $("importModalBackdrop");
-    if (!backdrop) return;
-    backdrop.classList.add("open");
-    backdrop.setAttribute("aria-hidden", "false");
-    document.body.classList.add("modal-open");
-    $("closeImportModalBtn")?.focus();
-  }
+    // 優先使用「本要點」辨識補助欄，避免和他機關補助混淆。
+    candidates.grant = items.filter(item =>
+      normalizeText(item.text).includes("本要點")
+    );
 
-  function closeImportModal() {
-    if (documentState.isProcessing) return;
-    const backdrop = $("importModalBackdrop");
-    if (!backdrop) return;
-    backdrop.classList.remove("open");
-    backdrop.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("modal-open");
-    $("importFilesBtn")?.focus();
-  }
+    const requiredFields = [
+      "unitPrice",
+      "quantity",
+      "budget",
+      "grant",
+      "agency",
+      "self",
+      "other"
+    ];
 
-  function clearAllFiles() {
-    if (documentState.isProcessing) return;
+    const missing = requiredFields.filter(
+      field => !candidates[field].length
+    );
 
-    documentState.applicationFiles = [];
-    documentState.expenseFiles = [];
-
-    const applicationInput = $("applicationFilesInput");
-    const expenseInput = $("expenseFilesInput");
-    if (applicationInput) applicationInput.value = "";
-    if (expenseInput) expenseInput.value = "";
-
-    renderFileList("application");
-    renderFileList("expense");
-
-    const notice = $("importNotice");
-    if (notice) {
-      const feedback = notice.querySelector(".import-selection-feedback");
-      if (feedback) feedback.remove();
+    if (missing.length) {
+      return {
+        success: false,
+        missing,
+        candidates
+      };
     }
+
+    const headerItems = requiredFields.flatMap(
+      field => candidates[field]
+    );
+
+    const headerY =
+      headerItems.reduce((sum, item) => sum + item.cy, 0) /
+      headerItems.length;
+
+    const centers = {};
+
+    for (const field of requiredFields) {
+      const nearest = candidates[field]
+        .slice()
+        .sort(
+          (a, b) =>
+            Math.abs(a.cy - headerY) - Math.abs(b.cy - headerY)
+        )[0];
+
+      centers[field] = nearest.cx;
+    }
+
+    // 所有欄位中心依 X 座標排序，取相鄰欄位中點作為欄位邊界。
+    const sortedFields = requiredFields
+      .map(field => ({ field, x: centers[field] }))
+      .sort((a, b) => a.x - b.x);
+
+    const boundaries = [];
+
+    for (let i = 0; i < sortedFields.length - 1; i++) {
+      boundaries.push(
+        (sortedFields[i].x + sortedFields[i + 1].x) / 2
+      );
+    }
+
+    return {
+      success: true,
+      headerY,
+      centers,
+      sortedFields,
+      boundaries
+    };
   }
 
-  function initialize() {
-    $("importFilesBtn")?.addEventListener("click", openImportModal);
-    $("closeImportModalBtn")?.addEventListener("click", closeImportModal);
-    $("cancelImportModalBtn")?.addEventListener("click", closeImportModal);
-    $("clearImportFilesBtn")?.addEventListener("click", clearAllFiles);
+  function parseNumber(text) {
+    const normalized = String(text || "")
+      .replace(/[，,]/g, "")
+      .replace(/[^\d.-]/g, "");
 
-    $("applicationFilesInput")?.addEventListener("change", (event) => {
-      addSelectedFiles("application", event.target.files || []);
-      // 清空 input，讓使用者之後仍可再次選取同一個檔案。
-      event.target.value = "";
+    if (!normalized || normalized === "-" || normalized === ".") {
+      return null;
+    }
+
+    const value = Number(normalized);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  function groupNumberRows(items, headerY) {
+    const numericItems = items.filter(item => {
+      if (item.cy <= headerY) return false;
+
+      // 只將純數字或金額文字視為數字欄位候選。
+      return /^[\$￥]?\s*[\d,]+(?:\.\d+)?\s*元?$/.test(
+        item.text.replace(/\s/g, "")
+      );
     });
 
-    $("expenseFilesInput")?.addEventListener("change", (event) => {
-      addSelectedFiles("expense", event.target.files || []);
-      event.target.value = "";
-    });
+    const sorted = numericItems.sort((a, b) => a.cy - b.cy);
+    const rows = [];
 
-    $("importModalBackdrop")?.addEventListener("click", (event) => {
-      if (event.target === event.currentTarget) closeImportModal();
-    });
+    for (const item of sorted) {
+      let row = rows.find(
+        candidate => Math.abs(candidate.cy - item.cy) <= 12
+      );
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && $("importModalBackdrop")?.classList.contains("open")) {
-        closeImportModal();
+      if (!row) {
+        row = { cy: item.cy, numbers: [] };
+        rows.push(row);
       }
+
+      row.numbers.push(item);
+      row.cy =
+        row.numbers.reduce((sum, value) => sum + value.cy, 0) /
+        row.numbers.length;
+    }
+
+    return rows;
+  }
+
+  function getColumnForX(x, boundaries, sortedFields) {
+    let index = boundaries.findIndex(boundary => x < boundary);
+
+    if (index === -1) {
+      index = sortedFields.length - 1;
+    }
+
+    return sortedFields[index].field;
+  }
+
+  function isKnownItem(itemText) {
+    const normalized = normalizeText(itemText);
+
+    return STANDARD_ITEMS.some(name =>
+      normalized.includes(normalizeText(name))
+    );
+  }
+
+  function parsePage(page, options = {}) {
+    const items = normalizeItems(page.items || []);
+
+    if (!items.length) {
+      return {
+        success: false,
+        message: "這一頁沒有可供解析的 OCR 文字。",
+        rows: []
+      };
+    }
+
+    const header = findHeaderAnchors(items);
+
+    if (!header.success) {
+      return {
+        success: false,
+        message: "無法完整辨識經費表表頭，暫不解析金額欄位。",
+        missingHeaders: header.missing,
+        rows: []
+      };
+    }
+
+    const numberRows = groupNumberRows(items, header.headerY);
+
+    if (!numberRows.length) {
+      return {
+        success: false,
+        message: "找不到表頭下方的經費數字資料。",
+        rows: []
+      };
+    }
+
+    // 推估經費項目與單位欄的分界
+    const possibleItemTexts = items.filter(item =>
+      item.cy > header.headerY &&
+      item.cx < header.centers.unitPrice &&
+      !/^[\d,.$￥]+$/.test(item.text.replace(/\s/g, ""))
+    );
+    
+    const xPositions = [
+      ...new Set(possibleItemTexts.map(item => Math.round(item.cx)))
+    ].sort((a, b) => a - b);
+    
+    let itemBoundary = header.centers.unitPrice;
+    let largestGap = 0;
+    
+    for (let i = 0; i < xPositions.length - 1; i++) {
+      const gap = xPositions[i + 1] - xPositions[i];
+    
+      if (gap > largestGap) {
+        largestGap = gap;
+        itemBoundary = (xPositions[i] + xPositions[i + 1]) / 2;
+      }
+    }
+
+    const rows = numberRows.map(numberRow => {
+      const values = {
+        unitPrice: "",
+        quantity: "",
+        budget: "",
+        grant: "",
+        agency: "",
+        self: "",
+        other: ""
+      };
+
+      const fieldConfidence = {};
+      const usedNumbers = new Set();
+
+      for (const numberItem of numberRow.numbers) {
+        const field = getColumnForX(
+          numberItem.cx,
+          header.boundaries,
+          header.sortedFields
+        );
+
+        const value = parseNumber(numberItem.text);
+
+        if (value === null) continue;
+
+        // 同一欄位若出現多個數字，先保留辨識信心較高者。
+        if (
+          !usedNumbers.has(field) ||
+          numberItem.confidence > fieldConfidence[field]
+        ) {
+          values[field] = value;
+          fieldConfidence[field] = numberItem.confidence;
+          usedNumbers.add(field);
+        }
+      }
+
+      // 經費項目通常位於單價欄左側；合併同一列的文字片段。
+      const itemParts = items
+        .filter(item =>
+          item.cx < itemBoundary &&
+          Math.abs(item.cy - numberRow.cy) <= 32
+        )
+        .sort((a, b) => {
+          if (Math.abs(a.cy - b.cy) > 4) {
+            return a.cy - b.cy;
+          }
+          return a.cx - b.cx;
+        });
+
+      const itemText = itemParts
+        .map(item => item.text)
+        .join("")
+        .replace(/\s+/g, "")
+        .trim();
+
+      const needsClassification =
+        !itemText || !isKnownItem(itemText);
+
+      const missingFields = Object.keys(values).filter(
+        field => values[field] === ""
+      );
+
+      const lowConfidenceFields = Object.keys(fieldConfidence).filter(
+        field => fieldConfidence[field] < MIN_CONFIDENCE
+      );
+
+      const itemConfidence = itemParts.length
+        ? itemParts.reduce(
+            (sum, item) => sum + item.confidence,
+            0
+          ) / itemParts.length
+        : 0;
+
+      const needsReview =
+        missingFields.length > 0 ||
+        lowConfidenceFields.length > 0 ||
+        itemConfidence < MIN_CONFIDENCE ||
+        needsClassification;
+
+      return {
+        item: itemText,
+        unitPrice: values.unitPrice,
+        quantity: values.quantity,
+        budget: values.budget,
+        grant: values.grant,
+        agency: values.agency,
+        self: values.self,
+        other: values.other,
+
+        needsReview,
+        needsClassification,
+        originalItem: itemText,
+
+        reviewInfo: {
+          missingFields,
+          lowConfidenceFields,
+          itemConfidence
+        }
+      };
     });
 
-    renderFileList("application");
-    renderFileList("expense");
+    return {
+      success: true,
+      rows,
+      header: {
+        centers: header.centers,
+        headerY: header.headerY
+      },
+      message: `解析完成，共取得 ${rows.length} 筆候選經費資料。`
+    };
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initialize, { once: true });
-  } else {
-    initialize();
-  }
+  window.ExpenseOCRParser = {
+    parsePage
+  };
 })();
