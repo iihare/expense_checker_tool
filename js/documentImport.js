@@ -9,6 +9,8 @@
   const documentState = {
     applicationFiles: [],
     expenseFiles: [],
+    parsedDocuments: [],
+    parsedExpenseRows: [],
     isProcessing: false
   };
 
@@ -32,6 +34,34 @@
 
   const formatCount = (count) => count > 0 ? `${count} 個檔案` : "尚未選擇";
 
+  function updateImportControls() {
+    const button = $("startOcrBtn");
+    if (!button) return;
+  
+    button.disabled =
+      documentState.isProcessing ||
+      documentState.expenseFiles.length === 0;
+  
+    button.textContent = documentState.isProcessing
+      ? "辨識中……"
+      : "開始辨識";
+  }
+  
+  function setImportFeedback(message) {
+    const notice = $("importNotice");
+    if (!notice) return;
+  
+    let feedback = notice.querySelector(".import-processing-feedback");
+  
+    if (!feedback) {
+      feedback = document.createElement("span");
+      feedback.className = "import-processing-feedback";
+      notice.appendChild(feedback);
+    }
+  
+    feedback.textContent = message;
+  }
+  
   function renderFileList(type) {
     const isApplication = type === "application";
     const files = isApplication
@@ -102,6 +132,12 @@
     });
 
     renderFileList(type);
+    if (type === "expense" && addedCount > 0) {
+      documentState.parsedDocuments = [];
+      documentState.parsedExpenseRows = [];
+    }
+    
+    updateImportControls();
 
     const messages = [];
     if (addedCount) messages.push(`已加入 ${addedCount} 個檔案`);
@@ -138,11 +174,99 @@
     $("importFilesBtn")?.focus();
   }
 
+  async function startOCR() {
+    if (documentState.isProcessing) return;
+  
+    const files = [...documentState.expenseFiles];
+  
+    if (files.length === 0) {
+      setImportFeedback("請先選擇經費概算表檔案。");
+      return;
+    }
+  
+    documentState.isProcessing = true;
+    documentState.parsedDocuments = [];
+    documentState.parsedExpenseRows = [];
+  
+    updateImportControls();
+  
+    let successCount = 0;
+    const failedFiles = [];
+  
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+  
+        setImportFeedback(
+          `正在辨識第 ${i + 1}/${files.length} 個檔案：${file.name}`
+        );
+  
+        try {
+          // 第一步：執行 OCR
+          const ocrResult = await window.ExpenseOCR.readDocument(file);
+  
+          // 第二步：執行解析器
+          const parsed = window.ExpenseOCRParser.parseDocument(ocrResult);
+  
+          // 保存完整解析結果
+          documentState.parsedDocuments.push({
+            fileName: file.name,
+            result: parsed
+          });
+  
+          // 收集辨識出的經費項目
+          const rows = Array.isArray(parsed.rows)
+            ? parsed.rows
+            : [];
+  
+          rows.forEach(row => {
+            documentState.parsedExpenseRows.push({
+              ...row,
+              sourceFile: file.name
+            });
+          });
+  
+          if (parsed.success && rows.length > 0) {
+            successCount++;
+          } else {
+            failedFiles.push(file.name);
+          }
+  
+          console.log(`檔案解析結果：${file.name}`, parsed);
+  
+        } catch (error) {
+          console.error(`檔案辨識失敗：${file.name}`, error);
+          failedFiles.push(file.name);
+        }
+      }
+  
+      const totalRows = documentState.parsedExpenseRows.length;
+  
+      let message =
+        `辨識完成！成功處理 ${successCount}/${files.length} 個檔案，共取得 ${totalRows} 筆經費資料。`;
+  
+      if (failedFiles.length > 0) {
+        message += ` 未成功處理的檔案：${failedFiles.join("、")}`;
+      }
+  
+      setImportFeedback(message);
+  
+      console.log("所有檔案的解析結果：", documentState.parsedDocuments);
+      console.log("所有經費項目：", documentState.parsedExpenseRows);
+  
+    } finally {
+      documentState.isProcessing = false;
+      updateImportControls();
+    }
+  }
+  
   function clearAllFiles() {
     if (documentState.isProcessing) return;
 
     documentState.applicationFiles = [];
     documentState.expenseFiles = [];
+    documentState.parsedDocuments = [];
+    documentState.parsedExpenseRows = [];
 
     const applicationInput = $("applicationFilesInput");
     const expenseInput = $("expenseFilesInput");
@@ -151,7 +275,8 @@
 
     renderFileList("application");
     renderFileList("expense");
-
+    updateImportControls();
+    
     const notice = $("importNotice");
     if (notice) {
       const feedback = notice.querySelector(".import-selection-feedback");
@@ -164,6 +289,7 @@
     $("closeImportModalBtn")?.addEventListener("click", closeImportModal);
     $("cancelImportModalBtn")?.addEventListener("click", closeImportModal);
     $("clearImportFilesBtn")?.addEventListener("click", clearAllFiles);
+    $("startOcrBtn")?.addEventListener("click", startOCR);
 
     $("applicationFilesInput")?.addEventListener("change", (event) => {
       addSelectedFiles("application", event.target.files || []);
@@ -188,6 +314,7 @@
 
     renderFileList("application");
     renderFileList("expense");
+    updateImportControls();
   }
 
   if (document.readyState === "loading") {
