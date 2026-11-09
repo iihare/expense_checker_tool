@@ -485,7 +485,7 @@
       }
     }
    
-    const rows = numberRows.map(numberRow => {
+    const rows = numberRows.map((numberRow, index) => {
       const values = {
         unitPrice: "",
         quantity: "",
