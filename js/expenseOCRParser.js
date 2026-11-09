@@ -408,7 +408,30 @@
         itemBoundary = (xPositions[i] + xPositions[i + 1]) / 2;
       }
     }
+    //暫時加入由此開始
+    console.log("經費文字區塊診斷：");
 
+    numberRows.forEach((numberRow, index) => {
+      const nearbyItems = items
+        .filter(item =>
+          item.cx < header.centers.unitPrice &&
+          Math.abs(item.cy - numberRow.cy) <= 120
+        )
+        .sort((a, b) => a.cy - b.cy);
+    
+      console.log(`第 ${index + 1} 筆數字列，Y=${numberRow.cy}`);
+    
+      console.table(
+        nearbyItems.map(item => ({
+          text: item.text,
+          x: Math.round(item.cx),
+          y: Math.round(item.cy),
+          height: Math.round(item.height),
+          confidence: item.confidence
+        }))
+      );
+    }); //暫時加入到此為止
+   
     const rows = numberRows.map(numberRow => {
       const values = {
         unitPrice: "",
