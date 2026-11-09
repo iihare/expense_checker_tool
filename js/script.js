@@ -225,6 +225,32 @@ function formatFieldValue(field) {
       openModal();
     }));
   }
+
+  window.importExpenseRows = function(parsedRows) {
+    if (!Array.isArray(parsedRows) || parsedRows.length === 0) {
+      showToast("沒有可匯入的經費資料");
+      return;
+    }
+  
+    const importedRows = parsedRows.map(row => ({
+      id: nextId++,
+      item: row.item || "",
+      unitPrice: Number(row.unitPrice) || 0,
+      quantity: Number(row.quantity) || 0,
+      budget: Number(row.budget) || 0,
+      grant: Number(row.grant) || 0,
+      agency: Number(row.agency) || 0,
+      self: Number(row.self) || 0,
+      other: Number(row.other) || 0
+    }));
+  
+    expenseRows.push(...importedRows);
+  
+    renderExpenses();
+    markEdited();
+  
+    showToast(`已匯入 ${importedRows.length} 筆經費資料`);
+  };
   
   function escapeHTML(value) {
     return String(value).replace(/[&<>"']/g, char => ({
