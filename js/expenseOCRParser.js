@@ -338,6 +338,18 @@
 
   function parsePage(page, options = {}) {
     const items = normalizeItems(page.items || []);
+    //暫時加入
+    console.log(`第 ${page.pageNumber} 頁 OCR 座標：`);
+
+    console.table(items.map(item => ({
+      text: item.text,
+      x: Math.round(item.cx),
+      y: Math.round(item.cy),
+      height: Math.round(item.height),
+      confidence: item.confidence
+    })));
+    
+    console.log("目前使用的 headerY：", options.header?.headerY);//結束
   
     if (!items.length) {
       return {
