@@ -208,7 +208,19 @@ function formatFieldValue(field) {
         <td class="numeric">${fmt(row.agency)}</td>
         <td class="numeric">${fmt(row.self)}</td>
         <td class="numeric">${fmt(row.other)}</td>
-        <td class="table-actions"><button class="text-button" data-edit="${row.id}" type="button">編輯</button><button class="text-button danger" data-delete="${row.id}" type="button">刪除</button></td>
+      
+        ${hasOCRRows ? `
+          <td class="import-status-cell">
+            ${row.importSource === "ocr"
+              ? escapeHTML(row.importStatus || "已辨識")
+              : ""}
+          </td>
+        ` : ""}
+      
+        <td class="table-actions">
+          <button class="text-button" data-edit="${row.id}" type="button">編輯</button>
+          <button class="text-button danger" data-delete="${row.id}" type="button">刪除</button>
+        </td>
       `;
     
       tbody.appendChild(tr);
