@@ -338,18 +338,6 @@
 
   function parsePage(page, options = {}) {
     const items = normalizeItems(page.items || []);
-    //暫時加入
-    console.log(`第 ${page.pageNumber} 頁 OCR 座標：`);
-
-    console.table(items.map(item => ({
-      text: item.text,
-      x: Math.round(item.cx),
-      y: Math.round(item.cy),
-      height: Math.round(item.height),
-      confidence: item.confidence
-    })));
-    
-    console.log("目前使用的 headerY：", options.header?.headerY);//結束
   
     if (!items.length) {
       return {
@@ -390,27 +378,6 @@
       header.headerY,
       options.ignoreHeaderY === true
     ).filter(row => row.cy < summaryY);
-    
-    //暫時加入由此
-    console.log("目前頁面：", page.pageNumber);
-    console.log("沿用的 headerY：", header.headerY);
-    
-    console.log(
-      "頁面文字 Y 座標範圍：",
-      Math.min(...items.map(item => item.cy)),
-      Math.max(...items.map(item => item.cy))
-    );
-    
-    console.log(
-      "數字項目：",
-      items
-        .filter(item => /^[\d,]+(?:\.\d+)?$/.test(item.text.replace(/\s/g, "")))
-        .map(item => ({
-          text: item.text,
-          x: Math.round(item.cx),
-          y: Math.round(item.cy)
-        }))
-    );//暫時加入結束
     
     if (!numberRows.length) {
       return {
@@ -465,6 +432,58 @@
         }))
       );
     }); //暫時加入到此為止
+
+    // 將經費項目文字依照垂直位置分組
+    const itemTextGroups = numberRows.map(() => []);
+    
+    const itemTextCandidates = items
+      .filter(item =>
+        item.cx < itemBoundary &&
+        (options.ignoreHeaderY === true || item.cy > header.headerY) &&
+        item.cy < summaryY &&
+        !/^[\d,.$￥]+$/.test(item.text.replace(/\s/g, ""))
+      )
+      .sort((a, b) => a.cy - b.cy);
+    
+    // 將垂直距離接近的文字視為同一個文字區塊
+    const textBlocks = [];
+    
+    for (const item of itemTextCandidates) {
+      let block = textBlocks.find(candidate => {
+        const lastItem = candidate[candidate.length - 1];
+        return Math.abs(item.cy - lastItem.cy) <= 40;
+      });
+    
+      if (!block) {
+        block = [];
+        textBlocks.push(block);
+      }
+    
+      block.push(item);
+    }
+    
+    // 將每個文字區塊分配給中心位置最接近的數字列
+    for (const block of textBlocks) {
+      const blockCenter =
+        block.reduce((sum, item) => sum + item.cy, 0) / block.length;
+    
+      let nearestIndex = -1;
+      let nearestDistance = Infinity;
+    
+      numberRows.forEach((numberRow, index) => {
+        const distance = Math.abs(blockCenter - numberRow.cy);
+    
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = index;
+        }
+      });
+    
+      // 避免表頭或其他無關文字被分配到經費項目
+      if (nearestIndex !== -1 && nearestDistance <= 80) {
+        itemTextGroups[nearestIndex].push(...block);
+      }
+    }
    
     const rows = numberRows.map(numberRow => {
       const values = {
@@ -503,18 +522,14 @@
       }
 
       // 經費項目通常位於單價欄左側；合併同一列的文字片段。
-      const itemParts = items
-        .filter(item =>
-          item.cx < itemBoundary &&
-          Math.abs(item.cy - numberRow.cy) <= 32
-        )
+      const itemParts = itemTextGroups[index]
         .sort((a, b) => {
           if (Math.abs(a.cy - b.cy) > 4) {
             return a.cy - b.cy;
           }
           return a.cx - b.cx;
         });
-
+      
       const itemText = itemParts
         .map(item => item.text)
         .join("")
