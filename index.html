@@ -478,8 +478,8 @@ document.getElementById("ocrTestButton").addEventListener("click", async () => {
     );
 
     // 第二步：執行解析器
-    const parsed = ExpenseOCRParser.parsePage(result.pages[0]);
-
+    const parsed = ExpenseOCRParser.parseDocument(result);
+    
     console.log("解析結果：", parsed);
 
     // 第三步：顯示解析結果
