@@ -232,17 +232,34 @@ function formatFieldValue(field) {
       return;
     }
   
-    const importedRows = parsedRows.map(row => ({
-      id: nextId++,
-      item: row.item || "",
-      unitPrice: Number(row.unitPrice) || 0,
-      quantity: Number(row.quantity) || 0,
-      budget: Number(row.budget) || 0,
-      grant: Number(row.grant) || 0,
-      agency: Number(row.agency) || 0,
-      self: Number(row.self) || 0,
-      other: Number(row.other) || 0
-    }));
+    const importedRows = parsedRows.map(row => {
+      const needsReview = Boolean(row.needsReview);
+      const needsClassification = Boolean(row.needsClassification);
+  
+      return {
+        id: nextId++,
+        item: row.item || "",
+        unitPrice: Number(row.unitPrice) || 0,
+        quantity: Number(row.quantity) || 0,
+        budget: Number(row.budget) || 0,
+        grant: Number(row.grant) || 0,
+        agency: Number(row.agency) || 0,
+        self: Number(row.self) || 0,
+        other: Number(row.other) || 0,
+  
+        // OCR 匯入專用資料
+        importSource: "ocr",
+        needsReview,
+        needsClassification,
+        isConfirmed: false,
+  
+        // 初始辨識狀態
+        importStatus:
+          needsReview || needsClassification
+            ? "待確認"
+            : "已辨識"
+      };
+    });
   
     expenseRows.push(...importedRows);
   
