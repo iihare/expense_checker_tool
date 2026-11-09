@@ -168,6 +168,13 @@ function formatFieldValue(field) {
   function renderExpenses() {
     const tbody = $("expenseTableBody");
     tbody.innerHTML = "";
+    // 是否存在 OCR 匯入資料
+    const hasOCRRows = expenseRows.some(
+      row => row.importSource === "ocr"
+    );
+    
+    // 動態顯示匯入狀態標題
+    $("expenseImportStatusHeader").hidden = !hasOCRRows;
     $("expenseEmpty").style.display = expenseRows.length ? "none" : "block";
     $("expenseCountLabel").textContent = `共 ${expenseRows.length} 筆經費`;
     $("expenseTabCount").textContent = expenseRows.length ? `（${expenseRows.length}）` : "";
