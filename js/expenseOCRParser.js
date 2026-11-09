@@ -40,6 +40,7 @@
       .replace(/数量/g, "數量")
       .replace(/预/g, "預")
       .replace(/费/g, "費")
+      .replace(/纪/g, "費")
       .replace(/录/g, "錄");
   }
 
