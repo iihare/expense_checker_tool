@@ -228,7 +228,7 @@
         items: result.items,
         words: result.words
       });
-
+    }
     return {
       fileName: file.name,
       fileType: "pdf",
