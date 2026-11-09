@@ -25,22 +25,23 @@
 </header>
 
 <!-- 測試區 -->
-<div class="ocr-test">
-  <h3>文件辨識測試</h3>
+<div style="padding: 20px; border: 1px solid #ccc; margin: 20px;">
+  <h3>OCR 解析測試</h3>
 
   <input
     type="file"
     id="ocrTestFile"
-    accept=".pdf,.jpg,.jpeg,.png"
+    accept="image/*,.pdf"
   >
 
-  <button type="button" id="ocrTestButton">
-    開始辨識
+  <button id="ocrTestButton" type="button">
+    開始測試
   </button>
 
-  <p id="ocrTestStatus"></p>
-
-  <pre id="ocrTestResult"></pre>
+  <pre
+    id="ocrTestResult"
+    style="white-space: pre-wrap; overflow-wrap: anywhere;"
+  ></pre>
 </div>
 <!-- 測試區 -->
 
@@ -444,5 +445,39 @@
 <script src="./js/expenseOCR.js"></script>
 <script src="./js/expenseOCRParser.js"></script>
 <script src="./js/script.js"></script>
+<!-- 測試區 -->
+<script>
+document.getElementById("ocrTestButton").addEventListener("click", async () => {
+  const file = document.getElementById("ocrTestFile").files[0];
+  const output = document.getElementById("ocrTestResult");
+
+  if (!file) {
+    output.textContent = "請先選擇檔案。";
+    return;
+  }
+
+  try {
+    output.textContent = "正在辨識，請稍候……";
+
+    // 第一步：執行 OCR
+    const result = await ExpenseOCR.readDocument(file);
+
+    console.log("OCR 原始結果：", result);
+
+    // 第二步：執行解析器
+    const parsed = ExpenseOCRParser.parsePage(result.pages[0]);
+
+    console.log("解析結果：", parsed);
+
+    // 第三步：顯示解析結果
+    output.textContent = JSON.stringify(parsed, null, 2);
+
+  } catch (error) {
+    console.error(error);
+    output.textContent = "測試失敗：" + error.message;
+  }
+});
+</script>
+<!-- 測試區 -->
 </body>
 </html>
