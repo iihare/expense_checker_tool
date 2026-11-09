@@ -377,7 +377,28 @@
       items,
       header.headerY
     ).filter(row => row.cy < summaryY);
-
+    
+    //暫時加入由此
+    console.log("目前頁面：", page.pageNumber);
+    console.log("沿用的 headerY：", header.headerY);
+    
+    console.log(
+      "頁面文字 Y 座標範圍：",
+      Math.min(...items.map(item => item.cy)),
+      Math.max(...items.map(item => item.cy))
+    );
+    
+    console.log(
+      "數字項目：",
+      items
+        .filter(item => /^[\d,]+(?:\.\d+)?$/.test(item.text.replace(/\s/g, "")))
+        .map(item => ({
+          text: item.text,
+          x: Math.round(item.cx),
+          y: Math.round(item.cy)
+        }))
+    );//暫時加入結束
+    
     if (!numberRows.length) {
       return {
         success: false,
