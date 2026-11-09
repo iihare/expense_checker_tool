@@ -187,13 +187,14 @@
     documentState.isProcessing = true;
     documentState.parsedDocuments = [];
     documentState.parsedExpenseRows = [];
-  
     updateImportControls();
   
-    let successCount = 0;
+    const allPages = [];
+    const pageSourceFiles = [];
     const failedFiles = [];
   
     try {
+      // 第一階段：逐一對檔案進行 OCR，合併所有頁面
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
   
@@ -202,37 +203,18 @@
         );
   
         try {
-          // 第一步：執行 OCR
           const ocrResult = await window.ExpenseOCR.readDocument(file);
   
-          // 第二步：執行解析器
-          const parsed = window.ExpenseOCRParser.parseDocument(ocrResult);
+          ocrResult.pages.forEach(page => {
+            const globalPageNumber = allPages.length + 1;
   
-          // 保存完整解析結果
-          documentState.parsedDocuments.push({
-            fileName: file.name,
-            result: parsed
-          });
-  
-          // 收集辨識出的經費項目
-          const rows = Array.isArray(parsed.rows)
-            ? parsed.rows
-            : [];
-  
-          rows.forEach(row => {
-            documentState.parsedExpenseRows.push({
-              ...row,
-              sourceFile: file.name
+            allPages.push({
+              ...page,
+              pageNumber: globalPageNumber
             });
+  
+            pageSourceFiles[globalPageNumber] = file.name;
           });
-  
-          if (parsed.success && rows.length > 0) {
-            successCount++;
-          } else {
-            failedFiles.push(file.name);
-          }
-  
-          console.log(`檔案解析結果：${file.name}`, parsed);
   
         } catch (error) {
           console.error(`檔案辨識失敗：${file.name}`, error);
@@ -240,18 +222,50 @@
         }
       }
   
+      if (allPages.length === 0) {
+        setImportFeedback("沒有成功辨識的頁面，請確認檔案是否正常。");
+        return;
+      }
+  
+      // 第二階段：將所有頁面合併成一份文件，再進行解析
+      setImportFeedback("OCR 完成，正在整理經費資料……");
+  
+      const combinedDocument = {
+        fileName: files.map(file => file.name).join("、"),
+        fileType: "combined",
+        totalPages: allPages.length,
+        pages: allPages
+      };
+  
+      const parsed = window.ExpenseOCRParser.parseDocument(
+        combinedDocument
+      );
+  
+      documentState.parsedDocuments.push({
+        fileName: combinedDocument.fileName,
+        result: parsed
+      });
+  
+      const rows = Array.isArray(parsed.rows) ? parsed.rows : [];
+  
+      documentState.parsedExpenseRows = rows.map(row => ({
+        ...row,
+        sourceFile: pageSourceFiles[row.sourcePage] || ""
+      }));
+  
       const totalRows = documentState.parsedExpenseRows.length;
   
       let message =
-        `辨識完成！成功處理 ${successCount}/${files.length} 個檔案，共取得 ${totalRows} 筆經費資料。`;
+        `辨識完成！共處理 ${allPages.length} 頁，取得 ${totalRows} 筆經費資料。`;
   
       if (failedFiles.length > 0) {
-        message += ` 未成功處理的檔案：${failedFiles.join("、")}`;
+        message += ` 辨識失敗的檔案：${failedFiles.join("、")}`;
       }
   
       setImportFeedback(message);
   
-      console.log("所有檔案的解析結果：", documentState.parsedDocuments);
+      console.log("合併後的 OCR 頁面：", combinedDocument);
+      console.log("整份文件的解析結果：", parsed);
       console.log("所有經費項目：", documentState.parsedExpenseRows);
   
     } finally {
