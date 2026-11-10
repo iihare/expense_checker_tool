@@ -226,8 +226,8 @@
         });
 
         console.log(
-          "PDF 原生文字標準化結果：",
-          normalizeItems(textItems)
+          "PDF 原生文字轉換結果：",
+          textItems
         );
 
         continue;
