@@ -9,11 +9,8 @@
 
   const FIELD_ALIASES = {
     unitName: [
-      "單位名稱",
-      "申請單位名稱",
-      "申請單位",
-      "機關團體名稱",
-      "學校名稱"
+      "申請單位全銜",
+      "單位全銜"
     ],
 
     qualification: [
