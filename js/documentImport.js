@@ -192,6 +192,7 @@
     const allPages = [];
     const pageSourceFiles = [];
     const failedFiles = [];
+    let importSucceeded = false;
   
     try {
       // 第一階段：逐一對檔案進行 OCR，合併所有頁面
@@ -255,6 +256,8 @@
 
       window.importExpenseRows(documentState.parsedExpenseRows);
       
+      importSucceeded = true;
+      
       const totalRows = documentState.parsedExpenseRows.length;
   
       let message =
@@ -265,12 +268,6 @@
       }
   
       setImportFeedback(message);
-
-      // 清除匯入檔案及相關狀態
-      clearAllFiles();
-      
-      // 關閉匯入視窗
-      closeImportModal();
   
       console.log("合併後的 OCR 頁面：", combinedDocument);
       console.log("整份文件的解析結果：", parsed);
@@ -279,6 +276,12 @@
     } finally {
       documentState.isProcessing = false;
       updateImportControls();
+
+      // 只有成功匯入才清除檔案並關閉 Modal
+      if (importSucceeded) {
+        clearAllFiles();
+        closeImportModal();
+      }
     }
   }
   
