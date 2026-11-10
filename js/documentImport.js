@@ -265,6 +265,12 @@
       }
   
       setImportFeedback(message);
+
+      // 清除匯入檔案及相關狀態
+      clearAllFiles();
+      
+      // 關閉匯入視窗
+      closeImportModal();
   
       console.log("合併後的 OCR 頁面：", combinedDocument);
       console.log("整份文件的解析結果：", parsed);
