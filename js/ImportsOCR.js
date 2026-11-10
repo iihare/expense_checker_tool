@@ -1,4 +1,4 @@
-// expenseOCR.js
+// ImportsOCR.js
 // PDF 文字擷取 + PaddleOCR 圖片辨識
 
 (() => {
@@ -268,7 +268,7 @@
   }
 
   // 對外提供
-  window.ExpenseOCR = {
+  window.ImportsOCR = {
     readDocument
   };
   
