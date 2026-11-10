@@ -167,13 +167,7 @@
       const page = await pdf.getPage(pageNumber);
       const textContent = await page.getTextContent();
 
-      console.log("PDF 原生文字擷取結果：", textContent.items);
-      console.log(
-        "PDF 原生文字合併結果：",
-        textContent.items.map(item => item.str).join(" ")
-      );
-
-      /*const textItems = (textContent.items || [])
+      const textItems = (textContent.items || [])
         .filter(item => item.str && item.str.trim())
         .map(item => ({
           text: item.str,
@@ -181,30 +175,7 @@
           y: item.transform[5],
           width: item.width,
           height: item.height
-        }));*/
-      const textItems = (textContent.items || [])
-        .filter(item => item.str && item.str.trim())
-        .map(item => {
-          const x = item.transform[4];
-          const y = item.transform[5];
-          const width = item.width;
-          const height = item.height;
-      
-          return {
-            text: item.str,
-      
-            // PDF 原生文字的座標轉換
-            bbox: {
-              x0: x,
-              y0: y - height,
-              x1: x + width,
-              y1: y
-            },
-      
-            // PDF 原生文字沒有 OCR 信心值
-            confidence: 100
-          };
-        });
+        }));
 
       const pageText = textItems
         .map(item => item.text)
@@ -221,14 +192,9 @@
           source: "pdf-text",
           text: pageText,
           textItems,
-          items: textItems,
+          items: [],
           words: []
         });
-
-        console.log(
-          "PDF 原生文字轉換結果：",
-          textItems
-        );
 
         continue;
       }
