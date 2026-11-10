@@ -278,25 +278,35 @@
   
   function clearAllFiles() {
     if (documentState.isProcessing) return;
-
+  
+    // 清除匯入檔案
     documentState.applicationFiles = [];
     documentState.expenseFiles = [];
+  
+    // 清除 OCR 解析結果
     documentState.parsedDocuments = [];
     documentState.parsedExpenseRows = [];
-
+  
+    // 清除 input 的選取紀錄
     const applicationInput = $("applicationFilesInput");
     const expenseInput = $("expenseFilesInput");
+  
     if (applicationInput) applicationInput.value = "";
     if (expenseInput) expenseInput.value = "";
-
+  
+    // 更新檔案清單
     renderFileList("application");
     renderFileList("expense");
+  
+    // 更新辨識按鈕
     updateImportControls();
-    
+  
+    // 清除所有匯入提示訊息
     const notice = $("importNotice");
+  
     if (notice) {
-      const feedback = notice.querySelector(".import-selection-feedback");
-      if (feedback) feedback.remove();
+      notice.querySelector(".import-selection-feedback")?.remove();
+      notice.querySelector(".import-processing-feedback")?.remove();
     }
   }
 
