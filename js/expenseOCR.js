@@ -221,7 +221,7 @@
           source: "pdf-text",
           text: pageText,
           textItems,
-          items: [],
+          items: textItems,
           words: []
         });
 
