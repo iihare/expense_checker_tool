@@ -167,6 +167,12 @@
       const page = await pdf.getPage(pageNumber);
       const textContent = await page.getTextContent();
 
+      console.log("PDF 原生文字擷取結果：", textContent.items);
+      console.log(
+        "PDF 原生文字合併結果：",
+        textContent.items.map(item => item.str).join(" ")
+      );
+
       const textItems = (textContent.items || [])
         .filter(item => item.str && item.str.trim())
         .map(item => ({
