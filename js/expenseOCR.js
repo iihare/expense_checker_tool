@@ -165,7 +165,8 @@
       }
 
       const page = await pdf.getPage(pageNumber);
-      const textContent = await page.getTextContent();
+      
+      /*const textContent = await page.getTextContent();
 
       const textItems = (textContent.items || [])
         .filter(item => item.str && item.str.trim())
@@ -197,7 +198,7 @@
         });
 
         continue;
-      }
+      }*/
 
       // 文字層不足時，改用 PaddleOCR
       const viewport = page.getViewport({
