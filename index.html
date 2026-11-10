@@ -470,9 +470,10 @@ document.getElementById("applicationOCRTestButton")
       output.textContent = "正在辨識，請稍候……";
 
       // 第一步：執行 OCR
-      const documentResult = await importsOCR.readDocument(file);
+      //const documentResult = await importsOCR.readDocument(file);
+      window.documentResult = await importsOCR.readDocument(file);
 
-      console.log("OCR 原始結果：", documentResult);
+      console.log("OCR 原始結果：", window.documentResult);
 
       // 查看第一頁所有 OCR 文字及座標
       console.table(
@@ -515,10 +516,7 @@ document.getElementById("applicationOCRTestButton")
       );
 
       // 第二步：執行申請書解析器
-      const parsed = ApplicationOCRParser.parseDocument(
-        documentResult
-      );
-
+      const parsed = ApplicationOCRParser.parseDocument(window.documentResult);
       console.log("申請書解析結果：", parsed);
 
       // 第三步：顯示解析結果
