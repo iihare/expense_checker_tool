@@ -42,6 +42,10 @@
     id="applicationOCRTestResult"
     style="white-space: pre-wrap; overflow-wrap: anywhere;"
   ></pre>
+  
+  <button id="checkDeviceBtn" type="button">
+  檢查手機環境
+  </button>
 </div>
 <!-- 申請書 OCR 測試區 -->
 
@@ -542,6 +546,23 @@ document.getElementById("applicationOCRTestButton")
       delete window.setOCRTestStatus;
     }
   });
+
+  document.getElementById("checkDeviceBtn")
+    .addEventListener("click", () => {
+  
+      const result = {
+        deviceMemory: navigator.deviceMemory ?? "不支援",
+        hardwareConcurrency: navigator.hardwareConcurrency ?? "不支援",
+        crossOriginIsolated: window.crossOriginIsolated,
+        sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
+        offscreenCanvas: typeof OffscreenCanvas !== "undefined"
+      };
+  
+      document.getElementById(
+        "applicationOCRTestResult"
+      ).textContent = JSON.stringify(result, null, 2);
+  
+    });
 </script>
 <!-- 測試區 -->
 </body>
