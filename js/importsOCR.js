@@ -293,7 +293,7 @@ console.log(
   /**
    * 對外提供的文件讀取入口
    */
-  /*async function readDocument(file, onProgress) {
+  async function readDocument(file, onProgress) {
     if (!file) {
       throw new Error("請先選擇文件。");
     }
@@ -317,10 +317,10 @@ console.log(
     throw new Error(
       "目前只支援 PDF、JPG、JPEG、PNG 檔案。"
     );
-  }*/
+  }
 
   //暫時測試版
-  async function readDocument(file, onProgress) {
+  /*async function readDocument(file, onProgress) {
     if (!file) {
       throw new Error("請先選擇文件。");
     }
@@ -367,7 +367,7 @@ console.log(
   
       throw error;
     }
-  }
+  }*/
 
   // 對外提供
   window.importsOCR = {
