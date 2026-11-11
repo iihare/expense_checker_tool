@@ -148,6 +148,17 @@
           )[0];
   
         const distance = Math.abs(nearest.cy - y);
+        //新增11.11
+        console.log(
+          "表頭候選測試",
+          field,
+          {
+            text: nearest.text,
+            x: nearest.cx,
+            y: nearest.cy,
+            distance
+          }
+        );//新增end
   
         if (distance <= HEADER_TOLERANCE) {
           matched[field] = nearest;
@@ -179,6 +190,11 @@
       !bestHeader ||
       bestHeader.matchedCount !== requiredFields.length
     ) {
+      //新增11.11
+      console.log(
+        "缺少的表頭欄位：",
+        missing
+      );//新增end
       return {
         success: false,
         missing: requiredFields.filter(
