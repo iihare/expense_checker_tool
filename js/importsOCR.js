@@ -46,10 +46,9 @@
 
   //暫時測試版本
   function setOCRDebug(message) {
-    const debugBox = document.getElementById("ocrDebug");
   
-    if (debugBox) {
-      debugBox.textContent = message;
+    if (typeof window.setOCRTestStatus === "function") {
+      window.setOCRTestStatus(message);
     }
   
     console.log("[OCR Debug]", message);
@@ -289,7 +288,7 @@
   /**
    * 對外提供的文件讀取入口
    */
-  async function readDocument(file, onProgress) {
+  /*async function readDocument(file, onProgress) {
     if (!file) {
       throw new Error("請先選擇文件。");
     }
@@ -313,6 +312,56 @@
     throw new Error(
       "目前只支援 PDF、JPG、JPEG、PNG 檔案。"
     );
+  }*/
+
+  //暫時測試版
+  async function readDocument(file, onProgress) {
+    if (!file) {
+      throw new Error("請先選擇文件。");
+    }
+  
+    const fileName = file.name.toLowerCase();
+  
+    setOCRDebug(`④ 開始處理文件：${file.name}`);
+  
+    try {
+      if (
+        file.type === "application/pdf" ||
+        fileName.endsWith(".pdf")
+      ) {
+        setOCRDebug("⑤ 判定為 PDF，開始執行 PDF 辨識……");
+  
+        const result = await readPDF(file, onProgress);
+  
+        setOCRDebug("⑥ PDF 辨識完成。");
+  
+        return result;
+      }
+  
+      if (
+        file.type.startsWith("image/") ||
+        /\.(jpg|jpeg|png)$/i.test(fileName)
+      ) {
+        setOCRDebug("⑤ 判定為圖片，開始執行圖片辨識……");
+  
+        const result = await readImage(file, onProgress);
+  
+        setOCRDebug("⑥ 圖片辨識完成。");
+  
+        return result;
+      }
+  
+      throw new Error(
+        "目前只支援 PDF、JPG、JPEG、PNG 檔案。"
+      );
+  
+    } catch (error) {
+      setOCRDebug(
+        `文件處理失敗：${error.message}`
+      );
+  
+      throw error;
+    }
   }
 
   // 對外提供
