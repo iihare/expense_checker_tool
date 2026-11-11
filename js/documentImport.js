@@ -177,29 +177,157 @@
     $("importFilesBtn")?.focus();
   }
 
-  async function startOCR() {
-    if (documentState.isProcessing) return;
+
+  /**
+   * 處理申請書 OCR、解析及資料寫回。
+   *
+   * @returns {Promise<boolean>}
+   * true：處理成功
+   * false：沒有檔案或處理失敗
+   */
+  async function processApplicationFiles() {
   
-    const files = [...documentState.expenseFiles];
+    const files = [...documentState.applicationFiles];
   
     if (files.length === 0) {
-      setImportFeedback("請先選擇經費概算表檔案。");
-      return;
+      return false;
     }
   
-    documentState.isProcessing = true;
-    documentState.parsedDocuments = [];
+    // 清除上一次的解析結果
+    documentState.parsedApplicationDocuments = [];
+  
+    const allPages = [];
+    const failedFiles = [];
+  
+    // ---------- 1. 逐一執行 OCR ----------
+  
+    for (const file of files) {
+  
+      try {
+  
+        const result = await window.importsOCR.readDocument(file);
+  
+        if (
+          !result ||
+          !Array.isArray(result.pages) ||
+          result.pages.length === 0
+        ) {
+          throw new Error("沒有取得有效的 OCR 頁面。");
+        }
+  
+        allPages.push(...result.pages);
+  
+      } catch (error) {
+  
+        console.error(
+          `申請書 OCR 失敗：${file.name}`,
+          error
+        );
+  
+        failedFiles.push(file.name);
+      }
+    }
+  
+    // 所有檔案都失敗
+    if (allPages.length === 0) {
+  
+      setImportFeedback(
+        "申請書辨識失敗，請確認檔案內容或重新匯入。"
+      );
+  
+      return false;
+    }
+  
+    // ---------- 2. 合併 OCR 頁面 ----------
+  
+    const combinedDocument = {
+      fileName: files.map(file => file.name).join("、"),
+      fileType: "application",
+      totalPages: allPages.length,
+      pages: allPages
+    };
+  
+    // ---------- 3. 呼叫申請書解析器 ----------
+  
+    let parsed;
+  
+    try {
+  
+      parsed = window.ApplicationOCRParser.parseDocument(
+        combinedDocument
+      );
+  
+    } catch (error) {
+  
+      console.error("申請書解析失敗：", error);
+  
+      setImportFeedback(
+        "申請書 OCR 已完成，但解析資料時發生錯誤。"
+      );
+  
+      return false;
+    }
+  
+    // ---------- 4. 儲存解析結果 ----------
+  
+    documentState.parsedApplicationDocuments.push(parsed);
+  
+    // ---------- 5. 寫回 HTML 表單 ----------
+  
+    try {
+  
+      writeApplicationData(parsed);
+  
+    } catch (error) {
+  
+      console.error("申請書資料寫回失敗：", error);
+  
+      setImportFeedback(
+        "申請書解析完成，但寫回表單時發生錯誤。"
+      );
+  
+      return false;
+    }
+  
+    // ---------- 6. 回報辨識結果 ----------
+  
+    const reviewCount = Array.isArray(parsed.needsReview)
+      ? parsed.needsReview.length
+      : 0;
+  
+    let message =
+      `申請書辨識完成，共取得 ${allPages.length} 頁。`;
+  
+    if (reviewCount > 0) {
+      message += `另有 ${reviewCount} 個欄位需要人工確認。`;
+    }
+  
+    if (failedFiles.length > 0) {
+      message +=
+        `以下檔案辨識失敗：${failedFiles.join("、")}。`;
+    }
+  
+    setImportFeedback(message);
+  
+    return true;
+  }
+
+  async function processExpenseFiles() {
+    const files = [...documentState.expenseFiles];
+  
+    // 清除上一次的經費解析結果
+    documentState.parsedExpenseDocuments = [];
     documentState.parsedExpenseRows = [];
-    updateImportControls();
   
     const allPages = [];
     const pageSourceFiles = [];
     const failedFiles = [];
-    let importSucceeded = false;
   
     try {
+  
       // 第一階段：逐一對檔案進行 OCR，合併所有頁面
       for (let i = 0; i < files.length; i++) {
+  
         const file = files[i];
   
         setImportFeedback(
@@ -207,9 +335,15 @@
         );
   
         try {
-          const ocrResult = await window.ExpenseOCR.readDocument(file);
+  
+          const ocrResult = await window.importsOCR.readDocument(file);
+  
+          if (!ocrResult || !Array.isArray(ocrResult.pages)) {
+            throw new Error("OCR 未回傳有效的頁面資料。");
+          }
   
           ocrResult.pages.forEach(page => {
+  
             const globalPageNumber = allPages.length + 1;
   
             allPages.push({
@@ -221,14 +355,20 @@
           });
   
         } catch (error) {
+  
           console.error(`檔案辨識失敗：${file.name}`, error);
           failedFiles.push(file.name);
         }
       }
   
+      // 所有檔案都沒有成功辨識
       if (allPages.length === 0) {
-        setImportFeedback("沒有成功辨識的頁面，請確認檔案是否正常。");
-        return;
+  
+        setImportFeedback(
+          "沒有成功辨識的頁面，請確認檔案是否正常。"
+        );
+  
+        return false;
       }
   
       // 第二階段：將所有頁面合併成一份文件，再進行解析
@@ -245,22 +385,23 @@
         combinedDocument
       );
   
-      documentState.parsedDocuments.push({
+      // 儲存解析結果
+      documentState.parsedExpenseDocuments.push({
         fileName: combinedDocument.fileName,
         result: parsed
       });
   
+      // 整理經費項目及來源檔案
       const rows = Array.isArray(parsed.rows) ? parsed.rows : [];
   
       documentState.parsedExpenseRows = rows.map(row => ({
         ...row,
         sourceFile: pageSourceFiles[row.sourcePage] || ""
       }));
-
+  
+      // 寫回經費表
       window.importExpenseRows(documentState.parsedExpenseRows);
-      
-      importSucceeded = true;
-      
+  
       const totalRows = documentState.parsedExpenseRows.length;
   
       let message =
@@ -276,10 +417,41 @@
       console.log("整份文件的解析結果：", parsed);
       console.log("所有經費項目：", documentState.parsedExpenseRows);
   
+      return true;
+  
+    } catch (error) {
+  
+      console.error("經費表處理失敗：", error);
+  
+      setImportFeedback(
+        "經費表解析或資料寫回失敗，請確認檔案內容後重新嘗試。"
+      );
+  
+      return false;
+    }
+  }
+  
+  async function startOCR() {
+    if (documentState.isProcessing) return;
+  
+    // 目前先維持經費表測試
+    if (documentState.expenseFiles.length === 0) {
+      setImportFeedback("請先選擇經費概算表檔案。");
+      return;
+    }
+  
+    documentState.isProcessing = true;
+    updateImportControls();
+  
+    let importSucceeded = false;
+  
+    try {
+      importSucceeded = await processExpenseFiles();
+  
     } finally {
       documentState.isProcessing = false;
       updateImportControls();
-
+  
       // 只有成功匯入才清除檔案並關閉 Modal
       if (importSucceeded) {
         clearAllFiles();
@@ -287,7 +459,7 @@
       }
     }
   }
-  
+
   function clearAllFiles() {
     if (documentState.isProcessing) return;
   
