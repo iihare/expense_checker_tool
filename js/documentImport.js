@@ -177,14 +177,59 @@
     $("importFilesBtn")?.focus();
   }
 
-
-  /**
-   * 處理申請書 OCR、解析及資料寫回。
-   *
-   * @returns {Promise<boolean>}
-   * true：處理成功
-   * false：沒有檔案或處理失敗
-   */
+   function writeApplicationData(parsed) {
+    // 文字欄位
+    const textFields = [
+      "unitName",
+      "leader",
+      "registeredAddress",
+      "mailingAddress"
+    ];
+  
+    // 金額欄位
+    const amountFields = [
+      "totalBudget",
+      "guidelineGrant",
+      "selfFund",
+      "otherAgency",
+      "expectedFee",
+      "otherAmount"
+    ];
+  
+    // 寫入文字欄位
+    textFields.forEach(field => {
+  
+      const input = $(field);
+      const value = parsed[field];
+  
+      if (!input || value === null || value === undefined) return;
+  
+      const text = String(value).trim();
+  
+      if (text !== "") {
+        input.value = text;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    });
+  
+    // 寫入金額欄位
+    amountFields.forEach(field => {
+  
+      const input = $(field);
+      const value = parsed[field];
+  
+      if (
+        !input ||
+        value === null ||
+        value === undefined ||
+        !Number.isFinite(Number(value))
+      ) return;
+  
+      input.value = String(value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
+  
   async function processApplicationFiles() {
   
     const files = [...documentState.applicationFiles];
