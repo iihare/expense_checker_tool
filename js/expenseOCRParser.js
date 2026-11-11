@@ -101,6 +101,25 @@
     candidates.grant = items.filter(item =>
       normalizeText(item.text).includes("本要點")
     );
+
+    //暫時新增
+    console.log(
+      "grant 候選文字：",
+      items
+        .filter(item => {
+          const text = normalizeText(item.text);
+          return text.includes("本") ||
+                 text.includes("要") ||
+                 text.includes("點") ||
+                 text.includes("補助");
+        })
+        .map(item => ({
+          text: item.text,
+          cx: item.cx,
+          cy: item.cy
+        }))
+    );
+    //暫時新增end
   
     const requiredFields = [
       "unitPrice",
