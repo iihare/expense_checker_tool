@@ -43,7 +43,10 @@
   
     button.disabled =
       documentState.isProcessing ||
-      documentState.expenseFiles.length === 0;
+      (
+        documentState.applicationFiles.length == 0 &&
+        documentState.expenseFiles.length == 0
+      );
   
     button.textContent = documentState.isProcessing
       ? "辨識中……"
