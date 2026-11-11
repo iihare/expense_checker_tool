@@ -44,7 +44,17 @@
     return paddleOCRPromise;
   }*/
 
-  //暫時版本
+  //暫時測試版本
+  function setOCRDebug(message) {
+    const debugBox = document.getElementById("ocrDebug");
+  
+    if (debugBox) {
+      debugBox.textContent = message;
+    }
+  
+    console.log("[OCR Debug]", message);
+  }
+  
   async function createOCR() {
     if (!paddleOCRPromise) {
       paddleOCRPromise = (async () => {
@@ -79,7 +89,8 @@
   
     return paddleOCRPromise;
   }
-
+  //暫時測試版本結束
+  
   /**
    * 將 Canvas 交給 PaddleOCR 辨識
    */
