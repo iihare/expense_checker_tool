@@ -467,11 +467,17 @@ document.getElementById("applicationOCRTestButton")
     }
 
     try {
-      output.textContent = "正在辨識，請稍候……";
-
+      output.textContent = "準備執行 OCR……";
+    
+      // 提供給 importsOCR.js 使用的狀態回報函式
+      window.setOCRTestStatus = (message) => {
+        output.textContent = message;
+      };
+    
       // 第一步：執行 OCR
-      //const documentResult = await importsOCR.readDocument(file);
       window.documentResult = await importsOCR.readDocument(file);
+    
+      output.textContent = "OCR 完成，正在解析申請書……";
 
       console.log("OCR 原始結果：", window.documentResult);
 
@@ -528,9 +534,12 @@ document.getElementById("applicationOCRTestButton")
 
     } catch (error) {
       console.error(error);
-
-      output.textContent =
-        "測試失敗：" + error.message;
+    
+      output.textContent +=
+        "\n\n測試失敗：" + error.message;
+    
+    } finally {
+      delete window.setOCRTestStatus;
     }
   });
 </script>
