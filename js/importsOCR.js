@@ -20,7 +20,7 @@
   /**
    * 建立 PaddleOCR
    */
-  async function createOCR() {
+  /*async function createOCR() {
     if (!paddleOCRPromise) {
       paddleOCRPromise = (async () => {
         const { PaddleOCR } = await import(PADDLEOCR_URL);
@@ -41,6 +41,42 @@
       });
     }
 
+    return paddleOCRPromise;
+  }*/
+
+  //暫時版本
+  async function createOCR() {
+    if (!paddleOCRPromise) {
+      paddleOCRPromise = (async () => {
+  
+        console.log("[OCR] 開始載入 PaddleOCR");
+  
+        const { PaddleOCR } = await import(PADDLEOCR_URL);
+  
+        console.log("[OCR] PaddleOCR 套件載入完成");
+  
+        const ocr = await PaddleOCR.create({
+          lang: "ch",
+          ocrVersion: "PP-OCRv5",
+          ortOptions: {
+            backend: "auto"
+          }
+        });
+  
+        console.log("[OCR] 模型初始化完成");
+  
+        return ocr;
+  
+      })().catch(error => {
+  
+        console.error("[OCR] 初始化失敗：", error);
+  
+        paddleOCRPromise = null;
+  
+        throw error;
+      });
+    }
+  
     return paddleOCRPromise;
   }
 
