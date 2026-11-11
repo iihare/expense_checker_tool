@@ -71,8 +71,9 @@
           textRecognitionModelName: "PP-OCRv5_mobile_rec",
           textDetectionBatchSize: 1,
           textRecognitionBatchSize: 1,
-          ortOptions: {
+         ortOptions: {
             backend: "wasm",
+            wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/",
             numThreads: 1
           }
         });
