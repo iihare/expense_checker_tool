@@ -480,6 +480,13 @@ document.getElementById("applicationOCRTestButton")
     
       // 第一步：執行 OCR
       window.documentResult = await importsOCR.readDocument(file);
+      console.log("OCR 回傳資料：", window.documentResult);
+
+      output.textContent = JSON.stringify(
+        window.documentResult,
+        null,
+        2
+      );
     
       output.textContent = "OCR 完成，正在解析申請書……";
 
@@ -500,20 +507,24 @@ document.getElementById("applicationOCRTestButton")
         })
       );
       
-      // 查看第二頁所有 OCR 文字及座標
-      console.table(
-        documentResult.pages[1].items.map(item => {
-          const xs = item.poly.map(p => p[0]);
-          const ys = item.poly.map(p => p[1]);
+      // 查看第二頁 OCR 文字及座標
+      if (documentResult.pages[1]) {
+        console.table(
+          documentResult.pages[1].items.map(item => {
+            const xs = item.poly.map(p => p[0]);
+            const ys = item.poly.map(p => p[1]);
       
-          return {
-            text: item.text,
-            score: item.score,
-            x: Math.round((Math.min(...xs) + Math.max(...xs)) / 2),
-            y: Math.round((Math.min(...ys) + Math.max(...ys)) / 2)
-          };
-        })
-      );
+            return {
+              text: item.text,
+              score: item.score,
+              x: Math.round((Math.min(...xs) + Math.max(...xs)) / 2),
+              y: Math.round((Math.min(...ys) + Math.max(...ys)) / 2)
+            };
+          })
+        );
+      } else {
+        console.log("文件沒有第二頁。");
+      }
 
       // 查看每一頁的 OCR 文字
       console.log(
