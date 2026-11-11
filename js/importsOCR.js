@@ -59,11 +59,11 @@
     if (!paddleOCRPromise) {
       paddleOCRPromise = (async () => {
   
-        console.log("[OCR] 開始載入 PaddleOCR");
+        setOCRDebug("① 開始載入 PaddleOCR 套件");
   
         const { PaddleOCR } = await import(PADDLEOCR_URL);
   
-        console.log("[OCR] PaddleOCR 套件載入完成");
+        setOCRDebug("② 套件載入完成，開始初始化模型");
   
         const ocr = await PaddleOCR.create({
           lang: "ch",
@@ -73,16 +73,17 @@
           }
         });
   
-        console.log("[OCR] 模型初始化完成");
+        setOCRDebug("③ PaddleOCR 初始化完成");
   
         return ocr;
   
       })().catch(error => {
   
-        console.error("[OCR] 初始化失敗：", error);
+        setOCRDebug(
+          `初始化失敗：${error.message}`
+        );
   
         paddleOCRPromise = null;
-  
         throw error;
       });
     }
