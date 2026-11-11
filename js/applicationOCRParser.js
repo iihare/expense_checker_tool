@@ -417,24 +417,25 @@
    * 將 OCR 文字轉換成金額。
    */
   function parseAmount(value) {
-
     if (isEmpty(value)) {
       return null;
     }
-
+  
     const text = normalizeText(value)
       .replace(/[,，]/g, "")
       .replace(/[＄$]/g, "")
       .replace(/新臺幣|新台幣|NTD|NT\$|元|圓/gi, "")
       .replace(/\s/g, "");
-
-    // 金額 OCR item 應以數字為主。
-    if (!/^-?\d+(?:\.\d+)?$/.test(text)) {
+  
+    // 從文字中擷取金額，不要求整段文字都是數字。
+    const match = text.match(/-?\d+(?:\.\d+)?/);
+  
+    if (!match) {
       return null;
     }
-
-    const amount = Number(text);
-
+  
+    const amount = Number(match[0]);
+  
     return Number.isFinite(amount) ? amount : null;
   }
 
@@ -443,9 +444,18 @@
    * 取得 OCR item 是否為金額。
    */
   function isAmountItem(item) {
-    return parseAmount(
-      item.text.replace(/[元圓]/g, "")
-    ) !== null;
+  
+    const text = normalizeText(item.text);
+  
+    // 純數字，或包含「元／圓」的金額文字。
+    const isPlainAmount =
+      /^-?[\d,]+(?:\.\d+)?$/.test(text);
+  
+    const hasCurrencyUnit =
+      /元|圓/.test(text) &&
+      /-?\d[\d,]*(?:\.\d+)?/.test(text);
+  
+    return isPlainAmount || hasCurrencyUnit;
   }
 
 
