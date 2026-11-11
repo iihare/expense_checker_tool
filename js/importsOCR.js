@@ -20,7 +20,7 @@
   /**
    * 建立 PaddleOCR
    */
-  /*async function createOCR() {
+  async function createOCR() {
     if (!paddleOCRPromise) {
       paddleOCRPromise = (async () => {
         const { PaddleOCR } = await import(PADDLEOCR_URL);
@@ -42,9 +42,9 @@
     }
 
     return paddleOCRPromise;
-  }*/
+  }
 
-  //暫時測試版本
+  /*暫時測試版本
   function setOCRDebug(message) {
   
     if (typeof window.setOCRTestStatus === "function") {
@@ -94,7 +94,7 @@ console.log(
   
     return paddleOCRPromise;
   }
-  //暫時測試版本結束
+  暫時測試版本結束*/
   
   /**
    * 將 Canvas 交給 PaddleOCR 辨識
