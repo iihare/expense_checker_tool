@@ -460,6 +460,24 @@
     }
   }
 
+  function clearApplicationFiles() {
+    documentState.applicationFiles = [];
+  
+    const input = $("applicationFilesInput");
+    if (input) input.value = "";
+  
+    renderFileList("application");
+  }
+
+  function clearExpenseFiles() {
+    documentState.expenseFiles = [];
+  
+    const input = $("expenseFilesInput");
+    if (input) input.value = "";
+  
+    renderFileList("expense");
+  }
+
   function clearAllFiles() {
     if (documentState.isProcessing) return;
   
