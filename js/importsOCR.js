@@ -65,16 +65,22 @@
         setOCRDebug("② 套件載入完成，開始初始化模型");
   
         const ocr = await PaddleOCR.create({
+          lang: "ch",
+          ocrVersion: "PP-OCRv5",
           textDetectionModelName: "PP-OCRv5_mobile_det",
           textRecognitionModelName: "PP-OCRv5_mobile_rec",
-  
           textDetectionBatchSize: 1,
           textRecognitionBatchSize: 1,
-  
           ortOptions: {
-            backend: "auto"
+            backend: "wasm",
+            numThreads: 1
           }
         });
+
+console.log(
+  "初始化資訊：",
+  ocr.getInitializationSummary()
+);
   
         setOCRDebug("③ PaddleOCR 初始化完成");
   
