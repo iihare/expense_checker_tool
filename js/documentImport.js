@@ -9,8 +9,11 @@
   const documentState = {
     applicationFiles: [],
     expenseFiles: [],
-    parsedDocuments: [],
+  
+    parsedApplicationDocuments: [],
+    parsedExpenseDocuments: [],
     parsedExpenseRows: [],
+  
     isProcessing: false
   };
 
