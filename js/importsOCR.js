@@ -67,14 +67,8 @@
         const ocr = await PaddleOCR.create({
           lang: "ch",
           ocrVersion: "PP-OCRv5",
-          textDetectionModelName: "PP-OCRv5_mobile_det",
-          textRecognitionModelName: "PP-OCRv5_mobile_rec",
-          textDetectionBatchSize: 1,
-          textRecognitionBatchSize: 1,
-         ortOptions: {
-            backend: "wasm",
-            wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/",
-            numThreads: 1
+          ortOptions: {
+            backend: "auto"
           }
         });
 
