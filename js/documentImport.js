@@ -432,29 +432,92 @@
   }
   
   async function startOCR() {
+    // 避免重複執行
     if (documentState.isProcessing) return;
   
-    // 目前先維持經費表測試
-    if (documentState.expenseFiles.length === 0) {
-      setImportFeedback("請先選擇經費概算表檔案。");
+    const hasApplicationFiles =
+      documentState.applicationFiles.length > 0;
+  
+    const hasExpenseFiles =
+      documentState.expenseFiles.length > 0;
+  
+    // 確認至少有一種檔案
+    if (!hasApplicationFiles && !hasExpenseFiles) {
+      setImportFeedback("請先選擇要辨識的檔案。");
       return;
     }
   
     documentState.isProcessing = true;
     updateImportControls();
   
-    let importSucceeded = false;
+    // 分別記錄兩種文件的處理結果
+    let applicationSucceeded = false;
+    let expenseSucceeded = false;
   
     try {
-      importSucceeded = await processExpenseFiles();
+  
+      // ---------- 1. 處理申請書 ----------
+  
+      if (hasApplicationFiles) {
+  
+        try {
+  
+          applicationSucceeded =
+            await processApplicationFiles();
+  
+        } catch (error) {
+  
+          console.error("申請書處理失敗：", error);
+  
+          setImportFeedback(
+            "申請書處理時發生未預期的錯誤。"
+          );
+        }
+      }
+  
+      // ---------- 2. 處理經費表 ----------
+  
+      if (hasExpenseFiles) {
+  
+        try {
+  
+          expenseSucceeded =
+            await processExpenseFiles();
+  
+        } catch (error) {
+  
+          console.error("經費表處理失敗：", error);
+  
+          setImportFeedback(
+            "經費表處理時發生未預期的錯誤。"
+          );
+        }
+      }
   
     } finally {
+  
+      // ---------- 3. 結束辨識狀態 ----------
+  
       documentState.isProcessing = false;
       updateImportControls();
   
-      // 只有成功匯入才清除檔案並關閉 Modal
-      if (importSucceeded) {
-        clearAllFiles();
+      // ---------- 4. 分別清除成功的檔案 ----------
+  
+      if (applicationSucceeded) {
+        clearApplicationFiles();
+      }
+  
+      if (expenseSucceeded) {
+        clearExpenseFiles();
+      }
+  
+      // ---------- 5. 確認是否可以關閉 Modal ----------
+  
+      const hasRemainingFiles =
+        documentState.applicationFiles.length > 0 ||
+        documentState.expenseFiles.length > 0;
+  
+      if (!hasRemainingFiles) {
         closeImportModal();
       }
     }
