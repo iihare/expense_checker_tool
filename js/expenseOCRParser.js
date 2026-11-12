@@ -18,13 +18,335 @@
   const FIELD_ALIASES = {
     unitPrice: ["單價"],
     quantity: ["數量"],
-    budget: ["預算金額"],
-    grant: ["本要點", "本要點補助"],
-    agency: ["他機關補助", "他機關"],
+    budget: ["預算金額", "預算"],
+    grant: ["本要點", "要點補助"],
+    agency: ["他機關"],
     self: ["自付經費", "自付"],
     other: ["其他"]
   };
 
+  // ── 表頭辨識設定（全部是「比例」或「字數」，沒有任何像素常數）──
+  const HEADER_FIELD_ORDER = [
+    "unitPrice", "quantity", "budget", "grant", "agency", "self", "other"
+  ];
+  const MIN_HEADER_FIELDS = 5;      // 至少辨識幾欄才接受
+  const MAX_HEADER_LINES = 6;       // 同一欄表頭最多合併幾行
+  const MAX_EXTRA_CHARS = 8;        // 合併後文字比關鍵字多出幾字以內才接受
+  const FUZZY_MIN_LENGTH = 3;       // 關鍵字至少幾字才允許 1 字誤差
+  const MAX_HEADER_TEXT_LENGTH = 8; // 表頭單行文字的字數上限（標題、說明文字會被排除）
+  const COLUMN_OVERLAP = 0.5;       // 同欄判定：x 範圍重疊占較窄文字的比例
+
+  function median(values) {
+    if (!values.length) return 0;
+    const s = [...values].sort((a, b) => a - b);
+    const m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+
+  function editDistance(a, b) {
+    const dp = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= b.length; j++) dp[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+        );
+      }
+    }
+    return dp[a.length][b.length];
+  }
+
+  // 回傳誤差字數：完全符合 0、差 1 字 1、不符合 null
+  function aliasMatch(text, alias) {
+    if (text.includes(alias)) return 0;
+    if (alias.length < FUZZY_MIN_LENGTH) return null;
+
+    for (let size = alias.length - 1; size <= alias.length + 1; size++) {
+      for (let s = 0; s + size <= text.length; s++) {
+        if (editDistance(text.slice(s, s + size), alias) <= 1) return 1;
+      }
+    }
+    return null;
+  }
+
+  // 第一個「同一列有 3 個以上數字」的列，其上緣就是資料區起點。
+  // 表頭一定在它上方；表格下方的總經費列、頁尾都不會被誤認。
+  function findDataTop(items) {
+    const rows = groupNumberRows(items, 0, true);
+    const first = rows.find(row => row.numbers.length >= 3);
+    return first ? Math.min(...first.numbers.map(n => n.y0)) : null;
+  }
+
+  // 資料區上方、字數短的文字才是表頭候選（標題、說明文字通常較長）
+  function getHeaderZone(items, dataTop) {
+    return items.filter(
+      item =>
+        item.cy < dataTop &&
+        normalizeText(item.text).length <= MAX_HEADER_TEXT_LENGTH
+    );
+  }
+
+  // 兩段文字的 x 範圍重疊夠多，就視為同一欄（比例判斷，與解析度無關）
+  function isSameColumn(a, b) {
+    const overlap = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+    const narrow = Math.min(a.x1 - a.x0, b.x1 - b.x0);
+    return narrow > 0 && overlap >= narrow * COLUMN_OVERLAP;
+  }
+
+  // 跨欄文字（例如「自籌款」橫跨兩欄、較大的標題）會同時與兩個
+  // 互不相連的欄位重疊，會把相鄰兩欄誤合併，必須先排除。
+  // 一次只排除最寬的一個再重算，避免把正常欄位的文字一起誤刪。
+  function removeBridgingItems(zoneItems) {
+    let items = zoneItems.slice();
+
+    while (true) {
+      let widest = null;
+
+      for (const a of items) {
+        const nb = items.filter(b => b !== a && isSameColumn(a, b));
+        let bridging = false;
+
+        for (let x = 0; x < nb.length && !bridging; x++) {
+          for (let y = x + 1; y < nb.length; y++) {
+            if (!isSameColumn(nb[x], nb[y])) {
+              bridging = true;
+              break;
+            }
+          }
+        }
+
+        if (bridging && (!widest || a.x1 - a.x0 > widest.x1 - widest.x0)) {
+          widest = a;
+        }
+      }
+
+      if (!widest) return items;
+      items = items.filter(item => item !== widest);
+    }
+  }
+
+  // 依 x 範圍重疊分欄；同一欄的各行不論行距多少都會歸在一起
+  function clusterByColumn(zoneItems) {
+    const items = removeBridgingItems(zoneItems);
+    const parent = items.map((_, i) => i);
+    const find = i => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+
+    for (let i = 0; i < items.length; i++) {
+      for (let j = i + 1; j < items.length; j++) {
+        if (isSameColumn(items[i], items[j])) parent[find(i)] = find(j);
+      }
+    }
+
+    const groups = new Map();
+    items.forEach((item, i) => {
+      const root = find(i);
+      if (!groups.has(root)) groups.set(root, []);
+      groups.get(root).push(item);
+    });
+
+    return [...groups.values()].map(g => g.sort((a, b) => a.cy - b.cy));
+  }
+
+  // 一欄內，嘗試所有「連續 1～N 行」的組合，與每個欄位關鍵字比對。
+  // 只看行的先後順序，不看行距。
+  function matchClusterToFields(cluster) {
+    const results = [];
+
+    for (let s = 0; s < cluster.length; s++) {
+      const last = Math.min(cluster.length, s + MAX_HEADER_LINES);
+
+      for (let e = s; e < last; e++) {
+        const win = cluster.slice(s, e + 1);
+        const text = normalizeText(win.map(line => line.text).join(""));
+
+        for (const field of HEADER_FIELD_ORDER) {
+          for (const alias of FIELD_ALIASES[field]) {
+            const a = normalizeText(alias);
+            const errors = aliasMatch(text, a);
+            if (errors === null) continue;
+
+            const extra = text.length - a.length;
+            if (extra > MAX_EXTRA_CHARS) continue;
+
+            // 完全符合一定優於模糊符合；其次是多出的字越少越好
+            results.push({ field, win, cost: errors * 10 + extra });
+          }
+        }
+      }
+    }
+
+    return results;
+  }
+
+  // 欄位必須由左到右依固定順序出現；
+  // 有欄位位置矛盾時，逐一移除「矛盾最多」的欄位。
+  function dropOutOfOrder(matched) {
+    const fields = HEADER_FIELD_ORDER.filter(f => matched[f]);
+
+    while (fields.length) {
+      const bad = fields.map(f => ({ f, n: 0 }));
+
+      for (let i = 0; i < fields.length; i++) {
+        for (let j = i + 1; j < fields.length; j++) {
+          if (matched[fields[i]].cx >= matched[fields[j]].cx) {
+            bad[i].n++;
+            bad[j].n++;
+          }
+        }
+      }
+
+      const worst = bad.reduce((a, b) => (b.n > a.n ? b : a), bad[0]);
+      if (worst.n === 0) break;
+      fields.splice(fields.indexOf(worst.f), 1);
+    }
+
+    return fields;
+  }
+
+  function findHeaderAnchors(items) {
+    const fail = (reason, kept = [], debug = {}) => ({
+      success: false,
+      reason,
+      missing: HEADER_FIELD_ORDER.filter(f => !kept.includes(f)),
+      debug
+    });
+
+    // 1. 資料區起點
+    const dataTop = findDataTop(items);
+    if (dataTop === null) {
+      return fail("找不到含 3 個以上數字的資料列，無法界定表頭區");
+    }
+
+    // 2. 表頭區 → 分欄
+    const zone = getHeaderZone(items, dataTop);
+    const clusters = clusterByColumn(zone);
+
+    // 3. 每欄各自比對，再依成本由低到高指派欄位（一欄只配一個欄位）
+    const options = [];
+
+    clusters.forEach((cluster, ci) => {
+      const bestPerField = {};
+      for (const r of matchClusterToFields(cluster)) {
+        if (!bestPerField[r.field] || r.cost < bestPerField[r.field].cost) {
+          bestPerField[r.field] = r;
+        }
+      }
+      Object.values(bestPerField).forEach(r => options.push({ ...r, ci }));
+    });
+
+    options.sort((a, b) => a.cost - b.cost);
+
+    const matched = {};
+    const usedClusters = new Set();
+
+    for (const opt of options) {
+      if (matched[opt.field] || usedClusters.has(opt.ci)) continue;
+
+      const x0 = Math.min(...opt.win.map(l => l.x0));
+      const x1 = Math.max(...opt.win.map(l => l.x1));
+
+      matched[opt.field] = {
+        cx: (x0 + x1) / 2,
+        ci: opt.ci,
+        text: opt.win.map(l => l.text).join("|"),
+        cost: opt.cost
+      };
+      usedClusters.add(opt.ci);
+    }
+
+    // 4. 順序檢查與數量檢查
+    const kept = dropOutOfOrder(matched);
+
+    const debug = {
+      dataTop,
+      zoneCount: zone.length,
+      clusters: clusters.map(c => c.map(l => l.text).join("|")),
+      matched: Object.fromEntries(
+        kept.map(f => [f, { text: matched[f].text, cx: matched[f].cx }])
+      )
+    };
+
+    if (kept.length < MIN_HEADER_FIELDS) {
+      return fail(
+        `只辨識到 ${kept.length} 個欄位（至少需要 ${MIN_HEADER_FIELDS} 個）`,
+        kept,
+        debug
+      );
+    }
+
+    // 5. 缺少的欄位用已知欄位內插 / 外推
+    const known = kept.map(field => ({
+      field,
+      index: HEADER_FIELD_ORDER.indexOf(field),
+      x: matched[field].cx
+    }));
+
+    const spacings = [];
+    for (let i = 0; i < known.length - 1; i++) {
+      spacings.push(
+        (known[i + 1].x - known[i].x) /
+          (known[i + 1].index - known[i].index)
+      );
+    }
+    const avgSpacing = median(spacings);
+
+    const centers = {};
+    const inferredFields = [];
+
+    HEADER_FIELD_ORDER.forEach((field, index) => {
+      if (kept.includes(field)) {
+        centers[field] = matched[field].cx;
+        return;
+      }
+
+      const left = [...known].reverse().find(k => k.index < index);
+      const right = known.find(k => k.index > index);
+
+      if (left && right) {
+        centers[field] =
+          left.x +
+          ((right.x - left.x) * (index - left.index)) /
+            (right.index - left.index);
+      } else if (left) {
+        centers[field] = left.x + avgSpacing * (index - left.index);
+      } else {
+        centers[field] = right.x - avgSpacing * (right.index - index);
+      }
+
+      inferredFields.push(field);
+    });
+
+    // 6. 表頭下緣：取「被採用的那幾欄」整欄文字的最下緣，
+    //    多行表頭的最後一行也算在內。
+    const headerY = Math.max(
+      ...kept.map(f =>
+        Math.max(...clusters[matched[f].ci].map(line => line.y1))
+      )
+    );
+
+    const sortedFields = HEADER_FIELD_ORDER
+      .map(field => ({ field, x: centers[field] }))
+      .sort((a, b) => a.x - b.x);
+
+    const boundaries = [];
+    for (let i = 0; i < sortedFields.length - 1; i++) {
+      boundaries.push((sortedFields[i].x + sortedFields[i + 1].x) / 2);
+    }
+
+    return {
+      success: true,
+      headerY,
+      centers,
+      sortedFields,
+      boundaries,
+      complete: inferredFields.length === 0,
+      inferredFields,
+      debug
+    };
+  }
+  
   const MIN_CONFIDENCE = 0.75;
 
   function normalizeText(text) {
@@ -40,7 +362,7 @@
       .replace(/数量/g, "數量")
       .replace(/预/g, "預")
       .replace(/费/g, "費")
-      .replace(/纪/g, "費")
+      .replace(/纪/g, "紀")
       .replace(/录/g, "錄");
   }
 
@@ -81,187 +403,6 @@
         };
       })
       .filter(item => item && item.text);
-  }
-
-  function findHeaderAnchors(items) {
-    const candidates = {};
-  
-    for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
-      candidates[field] = items.filter(item => {
-        const text = normalizeText(item.text);
-  
-        return aliases.some(alias =>
-          text.includes(normalizeText(alias))
-        );
-      });
-    }
-  
-    // 本要點欄位只採用包含「本要點」的文字，
-    // 避免和其他補助欄位混淆。
-    candidates.grant = items.filter(item =>
-      normalizeText(item.text).includes("本要點")
-    );
-
-    //暫時新增
-    console.log(
-      "grant 候選文字：",
-      items
-        .filter(item => {
-          const text = normalizeText(item.text);
-          return text.includes("本") ||
-                 text.includes("要") ||
-                 text.includes("點") ||
-                 text.includes("補助");
-        })
-        .map(item => ({
-          text: item.text,
-          cx: item.cx,
-          cy: item.cy
-        }))
-    );
-    //暫時新增end
-  
-    const requiredFields = [
-      "unitPrice",
-      "quantity",
-      "budget",
-      "grant",
-      "agency",
-      "self",
-      "other"
-    ];
-  
-    const missing = requiredFields.filter(
-      field => !candidates[field].length
-    );
-  
-    if (missing.length) {
-      return {
-        success: false,
-        missing,
-        candidates
-      };
-    }
-  
-    // 找出最可能的表頭高度。
-    // 每個候選位置都作為一次參考，統計附近能對應到幾個欄位。
-    const HEADER_TOLERANCE = 35;
-  
-    const possibleYs = requiredFields.flatMap(field =>
-      candidates[field].map(item => item.cy)
-    );
-  
-    let bestHeader = null;
-  
-    for (const y of possibleYs) {
-      const matched = {};
-      let matchedCount = 0;
-      let totalDistance = 0;
-  
-      for (const field of requiredFields) {
-        const nearest = candidates[field]
-          .slice()
-          .sort(
-            (a, b) =>
-              Math.abs(a.cy - y) - Math.abs(b.cy - y)
-          )[0];
-  
-        const distance = Math.abs(nearest.cy - y);
-        //新增11.11
-        console.log(
-          "表頭候選測試",
-          field,
-          {
-            text: nearest.text,
-            x: nearest.cx,
-            y: nearest.cy,
-            distance
-          }
-        );//新增end
-  
-        if (distance <= HEADER_TOLERANCE) {
-          matched[field] = nearest;
-          matchedCount++;
-          totalDistance += distance;
-        }
-      }
-  
-      // 優先選擇能辨識最多欄位的高度；
-      // 欄位數相同時，選擇垂直距離總和較小者。
-      if (
-        !bestHeader ||
-        matchedCount > bestHeader.matchedCount ||
-        (
-          matchedCount === bestHeader.matchedCount &&
-          totalDistance < bestHeader.totalDistance
-        )
-      ) {
-        bestHeader = {
-          matched,
-          matchedCount,
-          totalDistance
-        };
-      }
-    }
-  
-    // 必須找到全部七個欄位，才接受這個表頭。
-    if (
-      !bestHeader ||
-      bestHeader.matchedCount !== requiredFields.length
-    ) {
-      //新增11.11
-      console.log(
-        "缺少的表頭欄位：",
-        missing
-      );//新增end
-      return {
-        success: false,
-        missing: requiredFields.filter(
-          field => !bestHeader?.matched[field]
-        ),
-        candidates
-      };
-    }
-  
-    const centers = {};
-    const headerItems = [];
-  
-    for (const field of requiredFields) {
-      const nearest = bestHeader.matched[field];
-  
-      centers[field] = nearest.cx;
-      headerItems.push(nearest);
-    }
-  
-    // 使用七個欄位代表文字的平均高度。
-    const headerY =
-      headerItems.reduce((sum, item) => sum + item.cy, 0) /
-      headerItems.length;
-  
-    // 所有欄位中心依 X 座標排序，
-    // 取相鄰欄位中點作為欄位邊界。
-    const sortedFields = requiredFields
-      .map(field => ({
-        field,
-        x: centers[field]
-      }))
-      .sort((a, b) => a.x - b.x);
-  
-    const boundaries = [];
-  
-    for (let i = 0; i < sortedFields.length - 1; i++) {
-      boundaries.push(
-        (sortedFields[i].x + sortedFields[i + 1].x) / 2
-      );
-    }
-  
-    return {
-      success: true,
-      headerY,
-      centers,
-      sortedFields,
-      boundaries
-    };
   }
 
   function parseNumber(text) {
@@ -368,7 +509,9 @@
       centers,
       headerY: header.headerY * scaleY,
       sortedFields,
-      boundaries
+      boundaries,
+      complete: header.complete,
+      inferredFields: header.inferredFields || []
     };
   }
 
@@ -642,6 +785,8 @@
         headerY: header.headerY,
         boundaries: header.boundaries,
         sortedFields: header.sortedFields,
+        complete: header.complete,
+        inferredFields: header.inferredFields || [],
     
         // 保留建立表頭時的頁面尺寸，
         // 供後續頁面換算欄位位置使用。
@@ -655,7 +800,7 @@
   // 解析整份文件（支援多頁 PDF）
   function parseDocument(documentData) {
     const pages = documentData?.pages || [];
-  
+
     if (!pages.length) {
       return {
         success: false,
@@ -664,21 +809,18 @@
         message: "文件中沒有可供解析的頁面。"
       };
     }
-  
+
     const allRows = [];
     const pageResults = [];
-  
-    // 保存最近一次成功辨識的表頭資訊
+
+    // 最近一次成功使用的表頭（欄位位置會換算到後續頁面）
     let sharedHeader = null;
-    let isContinuationPage = false;
-  
+
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
       const pageNumber = page.pageNumber || i + 1;
-  
       const items = normalizeItems(page.items || []);
-  
-      // 沒有 OCR 文字，記錄失敗並繼續下一頁
+
       if (!items.length) {
         pageResults.push({
           pageNumber,
@@ -686,57 +828,54 @@
           rowCount: 0,
           message: "這一頁沒有可供解析的 OCR 文字。"
         });
-  
         continue;
       }
-  
-      // 優先檢查目前頁面是否有自己的完整表頭
-      const detectedHeader = findHeaderAnchors(items);
-  
+
+      const detected = findHeaderAnchors(items);
+
       let headerToUse;
-  
-      if (detectedHeader.success) {
-        // 有完整表頭時，使用目前頁面的表頭
-        const dimensions = getPageDimensions(page, items);
-  
+      let headerSource;
+      let ignoreHeaderY = false; // 每一頁各自決定，不會殘留到下一頁
+
+      if (detected.success && (detected.complete || !sharedHeader)) {
+        // 本頁有可用表頭（完整，或目前沒有更好的可用）
+        const { width, height } = getPageDimensions(page, items);
         headerToUse = {
-          ...detectedHeader,
-          referenceWidth: dimensions.width,
-          referenceHeight: dimensions.height
+          ...detected,
+          referenceWidth: width,
+          referenceHeight: height
         };
-  
-        // 更新共用表頭
-        sharedHeader = headerToUse;
-  
+        headerSource = detected.complete ? "own" : "own-inferred";
+
       } else if (sharedHeader) {
-        // 沒有表頭時，沿用上一個有效表頭
-        headerToUse = scaleHeaderToPage(
-          sharedHeader,
-          page,
-          items
-        );
-      
-        isContinuationPage = true;
-  
+        const scaled = scaleHeaderToPage(sharedHeader, page, items);
+
+        if (detected.success) {
+          // 本頁表頭不完整：欄位位置沿用前頁，表頭下緣用本頁的
+          headerToUse = { ...scaled, headerY: detected.headerY };
+          headerSource = "shared-columns";
+        } else {
+          // 沒有表頭（一般的續頁）：整頁都是資料區
+          headerToUse = scaled;
+          headerSource = "inherited";
+          ignoreHeaderY = true;
+        }
+
       } else {
-        // 尚未找到任何有效表頭
         pageResults.push({
           pageNumber,
           success: false,
           rowCount: 0,
           message: "尚未找到可供參考的完整經費表表頭。",
-          missingHeaders: detectedHeader.missing
+          reason: detected.reason,
+          missingHeaders: detected.missing,
+          debug: detected.debug
         });
-  
         continue;
       }
-  
-      // 使用目前頁面的表頭資訊解析明細
-      const parsed = parsePage(page, {
-        header: headerToUse,
-        ignoreHeaderY: isContinuationPage
-      });
-  
+
+      const parsed = parsePage(page, { header: headerToUse, ignoreHeaderY });
+
       if (!parsed.success) {
         pageResults.push({
           pageNumber,
@@ -745,32 +884,31 @@
           message: parsed.message,
           missingHeaders: parsed.missingHeaders || []
         });
-  
         continue;
       }
-  
-      // 更新共用表頭，確保後續頁面以最新頁面尺寸為基準
+
       sharedHeader = parsed.header;
-  
-      // 合併該頁的經費資料
+
       const pageRows = parsed.rows.map(row => ({
         ...row,
         sourceFile: documentData.fileName || "",
         sourcePage: pageNumber
       }));
-  
+
       allRows.push(...pageRows);
-  
+
       pageResults.push({
         pageNumber,
         success: true,
         rowCount: pageRows.length,
+        headerSource,
+        inferredFields: headerToUse.inferredFields || [],
         message: parsed.message
       });
     }
-  
+
     const success = allRows.length > 0;
-  
+
     return {
       success,
       fileName: documentData.fileName || "",
@@ -782,9 +920,9 @@
         : "文件解析失敗，沒有取得任何經費資料。"
     };
   }
-
   window.ExpenseOCRParser = {
     parsePage,
-    parseDocument
+    parseDocument,
+    debugHeader: page => findHeaderAnchors(normalizeItems(page.items || []))
   };
 })();
