@@ -829,7 +829,21 @@
     const page2Items = getPositionedItems(
       document.pages[1] || {}
     );
+    // ▼▼▼ 除錯用：確認 OCR 實際辨識結果 ▼▼▼
+    const toRow = i => ({
+      text: i.text,
+      normalized: i.normalizedText,
+      left: Math.round(i.bounds.left),
+      right: Math.round(i.bounds.right),
+      y: Math.round(i.bounds.y)
+    });
 
+    console.log("=== page1 items ===");
+    console.table(page1Items.map(toRow));
+
+    console.log("=== page2 items ===");
+    console.table(page2Items.map(toRow));
+    // ▲▲▲ 除錯完成後可刪除 ▲▲▲
 
     // ---------- 第一頁文字欄位 ----------
 
