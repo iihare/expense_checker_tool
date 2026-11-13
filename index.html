@@ -410,6 +410,22 @@
           <li class="import-empty-files">尚未選擇檔案</li>
         </ul>
       </section>
+      <!-- 請放在「經費概算表」檔案清單下方，預設隱藏 -->
+      <div id="geminiApiKeyBox" style="display: none; margin-top: 12px; padding: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px;">
+        <label for="geminiApiKeyInput" style="display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.95rem;">
+          Gemini API Key（辨識經費表必填，僅儲存於您的瀏覽器）
+        </label>
+        <input 
+          type="password" 
+          id="geminiApiKeyInput" 
+          placeholder="請貼上 AIzaSy... 開頭的金鑰" 
+          style="width: 100%; padding: 8px; border: 1px solid #94a3b8; border-radius: 4px; box-sizing: border-box;"
+        />
+        <small style="display: block; color: #64748b; margin-top: 6px;">
+          * 申請書仍維持純瀏覽器離線辨識（個資不外傳）；經費概算表將透過加密連線傳送至 Google Gemini API 進行表格解析。
+        </small>
+      </div>
+
 
       <div class="import-notice" id="importNotice" role="status">
         <strong>檔案會在瀏覽器中處理</strong>
