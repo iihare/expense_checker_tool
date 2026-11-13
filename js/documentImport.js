@@ -628,9 +628,10 @@
       });
 
       // Gemini API 網址。
-      const url =
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+     const modelName = "gemini-3.8-flash";
 
+     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+      
       // Gemini 結構化輸出設定。
       const requestBody = {
         contents: [
@@ -640,7 +641,6 @@
         ],
 
         generationConfig: {
-          temperature: 0.1,
 
           responseMimeType: "application/json",
 
@@ -721,7 +721,8 @@
         method: "POST",
 
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey
         },
 
         body: JSON.stringify(requestBody)
