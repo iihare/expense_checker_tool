@@ -566,38 +566,38 @@
   }
 
   // ---------- 5. 經費概算表：Gemini API ----------
-
+ 
   async function processExpenseFiles() {
     const files = [...documentState.expenseFiles];
-
+  
     if (files.length === 0) return false;
-
+  
     const apiKey =
       $("geminiApiKeyInput")?.value.trim() ||
       localStorage.getItem("gemini_api_key");
-
+  
     if (!apiKey) {
       setImportFeedback(
         "請先輸入 Gemini API Key 再開始辨識經費表。"
       );
-
+  
       return false;
     }
-
+  
     documentState.parsedExpenseDocuments = [];
     documentState.parsedExpenseRows = [];
-
+  
     try {
       setImportFeedback(
         `正在準備 ${files.length} 個經費表檔案並傳送至 Gemini AI 解析……`
       );
-
+  
       // 將所有經費表檔案轉為 inline_data。
       const parts = [];
-
+  
       for (const file of files) {
         const base64Data = await fileToBase64(file);
-
+  
         parts.push({
           inline_data: {
             mime_type: getMimeType(file),
@@ -605,7 +605,7 @@
           }
         });
       }
-
+  
       // Gemini 解析指示。
       const promptLines = [
         "請完整提取文件中「補助經費明細表 / 經費概算表」的所有明細項目。",
@@ -622,16 +622,17 @@
         "標準項目清單：",
         STANDARD_ITEMS.join("、")
       ];
-
+  
       parts.push({
         text: promptLines.join("\n")
       });
-
-      // Gemini API 網址。
-     const modelName = "gemini-3.8-flash";
-
-     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-      
+  
+      // 模型優先順序。
+      const MODEL_FALLBACK_LIST = [
+        "gemini-3.8-flash",
+        "gemini-3.5-flash-lite"
+      ];
+  
       // Gemini 結構化輸出設定。
       const requestBody = {
         contents: [
@@ -639,73 +640,72 @@
             parts
           }
         ],
-
+  
         generationConfig: {
-
           responseMimeType: "application/json",
-
+  
           responseSchema: {
             type: "ARRAY",
             description: "經費明細項目陣列",
-
+  
             items: {
               type: "OBJECT",
-
+  
               properties: {
                 originalItem: {
                   type: "STRING",
                   description: "表格中的原始經費項目名稱"
                 },
-
+  
                 item: {
                   type: "STRING",
                   enum: STANDARD_ITEMS,
                   description: "對應的標準經費項目分類"
                 },
-
+  
                 unitPrice: {
                   type: "NUMBER",
                   nullable: true,
                   description: "單價"
                 },
-
+  
                 quantity: {
                   type: "NUMBER",
                   nullable: true,
                   description: "數量"
                 },
-
+  
                 budget: {
                   type: "NUMBER",
                   nullable: true,
                   description: "預算金額"
                 },
-
+  
                 grant: {
                   type: "NUMBER",
                   nullable: true,
                   description: "申請本要點補助金額"
                 },
-
+  
                 agency: {
                   type: "NUMBER",
                   nullable: true,
                   description: "他機關補助金額"
                 },
-
+  
                 self: {
                   type: "NUMBER",
                   nullable: true,
                   description: "自籌款－自付經費"
                 },
-
+  
                 other: {
                   type: "NUMBER",
                   nullable: true,
                   description: "自籌款－其他（民間贊助或收費）"
                 }
               },
-
+  
               required: [
                 "originalItem",
                 "item",
@@ -715,80 +715,176 @@
           }
         }
       };
-
-      // 呼叫 Gemini API。
-      const response = await fetch(url, {
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey
-        },
-
-        body: JSON.stringify(requestBody)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        const errMsg =
-          data.error?.message ||
-          `HTTP 錯誤 ${response.status}`;
-
-        throw new Error(errMsg);
+  
+      // 儲存成功取得的 Gemini 回應。
+      let data = null;
+      let lastErrorMsg = "";
+  
+      // 逐一嘗試主要模型與備援模型。
+      for (const modelName of MODEL_FALLBACK_LIST) {
+  
+        const url =
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+  
+        // 每個模型最多呼叫兩次（第一次 + 重試一次）。
+        const maxAttempts = 2;
+  
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  
+          setImportFeedback(
+            `正在使用 ${modelName} 辨識經費表……`
+          );
+  
+          console.log(
+            `正在呼叫 ${modelName}，第 ${attempt + 1} 次`
+          );
+  
+          const response = await fetch(url, {
+            method: "POST",
+  
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": apiKey
+            },
+  
+            body: JSON.stringify(requestBody)
+          });
+  
+          const responseData = await response.json();
+  
+          // API 成功。
+          if (response.ok && !responseData.error) {
+            data = responseData;
+  
+            console.log(
+              `成功使用模型完成辨識：${modelName}`
+            );
+  
+            break;
+          }
+  
+          lastErrorMsg =
+            responseData.error?.message ||
+            `HTTP 錯誤 ${response.status}`;
+  
+          // 429 可能是額度或速率限制，
+          // 不一定能透過切換模型解決。
+          if (response.status === 429) {
+            throw new Error(
+              `Gemini API 使用額度或速率受到限制（429）：${lastErrorMsg}`
+            );
+          }
+  
+          // 只針對暫時性伺服器錯誤進行重試。
+          const retryableStatuses = [
+            500,
+            502,
+            503,
+            504
+          ];
+  
+          if (retryableStatuses.includes(response.status)) {
+  
+            // 還有重試機會時，等待後再次呼叫同一模型。
+            if (attempt < maxAttempts - 1) {
+  
+              const delay = 1000 * (attempt + 1);
+  
+              console.warn(
+                `${modelName} 發生錯誤 (${response.status})，` +
+                `${delay / 1000} 秒後重試。`
+              );
+  
+              setImportFeedback(
+                `${modelName} 暫時忙碌，等待後重新嘗試……`
+              );
+  
+              await new Promise(resolve =>
+                setTimeout(resolve, delay)
+              );
+  
+              continue;
+            }
+  
+            // 同一模型重試仍失敗，跳出內層迴圈，
+            // 改用下一個備援模型。
+            console.warn(
+              `${modelName} 重試後仍無法使用，準備切換備援模型。`
+            );
+  
+            break;
+          }
+  
+          // 其他錯誤直接中止，例如 API Key 錯誤、
+          // 請求格式錯誤或模型不存在。
+          throw new Error(
+            `${modelName} API 呼叫失敗：${lastErrorMsg}`
+          );
+        }
+  
+        // 已取得成功結果，不再呼叫其他模型。
+        if (data) break;
       }
-
+  
+      // 所有模型都失敗。
+      if (!data) {
+        throw new Error(
+          lastErrorMsg ||
+          "所有 Gemini 模型目前皆無法使用，請稍後再試。"
+        );
+      }
+  
       // 取得 AI 回傳資料。
       const aiRows = parseGeminiResponse(data);
-
+  
       const sourceFileNames = files
         .map(file => file.name)
         .join("、");
-
+  
       // 轉換為原本 ExpenseOCRParser 相容的資料格式。
       const formattedRows = formatExpenseRows(
         aiRows,
         sourceFileNames
       );
-
+  
       documentState.parsedExpenseDocuments.push({
         fileName: sourceFileNames,
-
+  
         result: {
           success: true,
           rows: formattedRows
         }
       });
-
+  
       documentState.parsedExpenseRows = formattedRows;
-
+  
       // 呼叫原本寫好的經費表寫回函式。
       if (typeof window.importExpenseRows !== "function") {
         throw new Error(
           "找不到 importExpenseRows()，請確認經費表寫回函式是否已載入。"
         );
       }
-
+  
       window.importExpenseRows(formattedRows);
-
+  
       setImportFeedback(
         `經費表辨識完成！共取得 ${formattedRows.length} 筆經費資料。`
       );
-
+  
       console.log("Gemini 解析結果：", formattedRows);
-
+  
       return true;
-
+  
     } catch (error) {
       console.error(
         "經費表 Gemini API 處理失敗：",
         error
       );
-
+  
       setImportFeedback(
         `經費表辨識失敗：${error.message}`
       );
-
+  
       return false;
     }
   }
