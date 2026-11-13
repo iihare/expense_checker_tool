@@ -749,7 +749,11 @@
       const needsClassification =
         !itemText || !isKnownItem(itemText);
 
-      const missingFields = Object.keys(values).filter(
+      // 補助金額、他機關補助、自付、其他 本來就可能是空白，不算缺漏；
+      // 只有單價、數量、預算金額缺值才需要人工確認。
+      const REQUIRED_VALUE_FIELDS = ["unitPrice", "quantity", "budget"];
+
+      const missingFields = REQUIRED_VALUE_FIELDS.filter(
         field => values[field] === ""
       );
 
