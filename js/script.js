@@ -61,9 +61,10 @@
   $("openAddModalIcon").addEventListener("click", openModal);
   $("closeModalX").addEventListener("click", closeModal);
   $("cancelModalBtn").addEventListener("click", closeModal);
+  /*
   $("expenseModalBackdrop").addEventListener("click", (event) => {
     if (event.target === $("expenseModalBackdrop")) closeModal();
-  });
+  });*/
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && $("expenseModalBackdrop").classList.contains("open")) closeModal();
   });
