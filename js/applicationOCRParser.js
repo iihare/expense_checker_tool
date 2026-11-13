@@ -343,9 +343,7 @@
 
     const label = findItem(
       items,
-      text =>
-        text === "申請單位全銜" ||
-        text === "單位全銜"
+      text => /^(申請者|申請單位|單位)全銜$/.test(text)
     );
 
     return findRightText(items, label);
@@ -566,7 +564,7 @@
       items,
       text =>
         text.includes("申請") &&
-        text.includes("其他政府機")
+        text.includes("其他政府")
     );
 
     result.otherAgency = findAmountNearLabel(
@@ -720,6 +718,7 @@
 
     return {
       unitName: findTextValue(page1, [
+        "申請者全銜",
         "申請單位全銜",
         "單位全銜"
       ]),
