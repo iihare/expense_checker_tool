@@ -1095,14 +1095,14 @@
     );
 
     // 點擊 Modal 外部關閉。
-    $("importModalBackdrop")?.addEventListener(
+    /*$("importModalBackdrop")?.addEventListener(
       "click",
       (event) => {
         if (event.target === event.currentTarget) {
           closeImportModal();
         }
       }
-    );
+    );*/
 
     // ESC 關閉 Modal。
     document.addEventListener("keydown", (event) => {
