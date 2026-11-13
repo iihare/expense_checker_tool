@@ -629,8 +629,8 @@
   
       // 模型優先順序。
       const MODEL_FALLBACK_LIST = [
-        "gemini-3.8-flash",
-        "gemini-3.5-flash-lite"
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash"
       ];
   
       // Gemini 結構化輸出設定。
