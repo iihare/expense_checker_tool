@@ -348,21 +348,30 @@
   
   const MIN_CONFIDENCE = 0.75;
 
+  // 簡體 → 繁體對照表。OCR 把繁體字讀成簡體時，在這裡補一個字即可。
+  const SIMPLIFIED_TO_TRADITIONAL = {
+    "预": "預", "额": "額", "经": "經", "费": "費", "单": "單", "价": "價",
+    "数": "數", "请": "請", "补": "補", "机": "機", "关": "關", "赛": "賽",
+    "纪": "紀", "录": "錄", "员": "員", "场": "場", "设": "設", "备": "備",
+    "书": "書", "资": "資", "钟": "鐘", "点": "點", "时": "時", "间": "間",
+    "总": "總", "动": "動", "说": "說", "会": "會", "计": "計", "仅": "僅",
+    "报": "報", "险": "險", "礼": "禮", "奖": "獎", "队": "隊", "个": "個",
+    "车": "車", "运": "運", "输": "輸", "国": "國", "项": "項", "细": "細",
+    "审": "審", "评": "評", "类": "類", "条": "條", "请": "請", "号": "號",
+    "申": "申", "务": "務", "业": "業", "师": "師", "发": "發", "别": "別"
+  };
+
+  function toTraditional(text) {
+    return String(text || "").replace(
+      /[\u4e00-\u9fff]/g,
+      ch => SIMPLIFIED_TO_TRADITIONAL[ch] || ch
+    );
+  }
+
   function normalizeText(text) {
     return String(text || "")
       .replace(/\s+/g, "")
-      .replace(/[，,]/g, "")
-      .replace(/預算金额/g, "預算金額")
-      .replace(/金额/g, "金額")
-      .replace(/经费/g, "經費")
-      .replace(/申请/g, "申請")
-      .replace(/补助/g, "補助")
-      .replace(/单价/g, "單價")
-      .replace(/数量/g, "數量")
-      .replace(/预/g, "預")
-      .replace(/费/g, "費")
-      .replace(/纪/g, "紀")
-      .replace(/录/g, "錄");
+      .replace(/[，,]/g, "");
   }
 
   function getBox(item) {
@@ -393,7 +402,7 @@
         if (!box) return null;
 
         return {
-          text: String(item.text || "").trim(),
+          text: toTraditional(String(item.text || "")).trim(),
           confidence: Number(item.confidence ?? item.score ?? 0),
           ...box,
           cx: (box.x0 + box.x1) / 2,
