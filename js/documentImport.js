@@ -758,8 +758,8 @@
         const url =
           `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
   
-        // 每個模型最多呼叫兩次（第一次 + 重試一次）。
-        const maxAttempts = 2;
+        // 每個模型最多呼叫兩次（第一次 + 重試兩次）。
+        const maxAttempts = 3;
   
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
   
@@ -820,11 +820,12 @@
             // 還有重試機會時，等待後再次呼叫同一模型。
             if (attempt < maxAttempts - 1) {
   
-              const delay = 1000 * (attempt + 1);
+              // 遞增等待：約 2 秒、4 秒，加上少量隨機值
+              const delay = 2000 * 2 ** attempt + Math.floor(Math.random() * 500);
   
               console.warn(
                 `${modelName} 發生錯誤 (${response.status})，` +
-                `${delay / 1000} 秒後重試。`
+                `${Math.round(delay / 1000)} 秒後重試。`
               );
   
               setImportFeedback(
