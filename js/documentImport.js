@@ -520,9 +520,13 @@
         row.originalItem || row.item || ""
       ).trim();
 
-      const item = STANDARD_ITEMS.includes(row.item)
+      // 標準分類：供文件提醒等檢查規則使用
+      const standardItem = STANDARD_ITEMS.includes(row.item)
         ? row.item
         : "非經費編列基準表所編之經費";
+
+      // 畫面顯示的項目：優先使用 OCR 原文，沒有原文才用分類
+      const item = originalItem || standardItem;
 
       const unitPrice = normalizeNumber(row.unitPrice);
       const quantity = normalizeNumber(row.quantity);
@@ -541,10 +545,11 @@
       if (budget === "") missingFields.push("budget");
 
       const isUnclassified =
-        item === "非經費編列基準表所編之經費";
+        standardItem === "非經費編列基準表所編之經費";
 
       return {
         item,
+        standardItem,
         originalItem,
 
         unitPrice,
