@@ -36,8 +36,20 @@
       return Number.isFinite(number) ? number : 0;
     }
 
+    const applicationUnitName =
+      String(application.unitName ?? "").trim();
+    
+    const expenseUnitName =
+      String(appState.expenseData.unitName ?? "").trim();
+    
     // 申請書金額與經費表合計的對應關係
     const comparisons = [
+      {
+        name: "申請單位全銜",
+        applicationAmount: applicationUnitName,
+        expenseAmount: expenseUnitName,
+        isTextComparison: true
+      },
       {
         name: "自付經費",
         applicationAmount: toNumber(application.selfFund),
@@ -58,31 +70,41 @@
         applicationAmount: toNumber(application.totalBudget),
         expenseAmount: toNumber(totals.budget)
       }
+      // 預計收費
+      {
+        name: "預計收費",
+        applicationAmount: toNumber(application.expectedFee),
+        expenseAmount: toNumber(totals.expectedFee)
+      },
+      // 其他
+      {
+        name: "其他",
+        applicationAmount: toNumber(application.otherAmount),
+        expenseAmount: toNumber(totals.other)
+      }
     ];
 
-    // 預計收費與其他合併比較
-    const expectedOther =
-      toNumber(application.expectedFee) +
-      toNumber(application.otherAmount);
-
-    comparisons.push({
-      name: "預計收費＋其他",
-      applicationAmount: expectedOther,
-      expenseAmount: toNumber(totals.other)
-    });
-
     const results = comparisons.map((item) => {
-      const difference =
-        item.applicationAmount - item.expenseAmount;
-
-      const isCorrect = difference === 0;
-
+      const isCorrect = item.isTextComparison
+        ? item.applicationAmount !== "" &&
+          item.expenseAmount !== "" &&
+          item.applicationAmount === item.expenseAmount
+        : item.applicationAmount === item.expenseAmount;
+    
+      const difference = item.isTextComparison
+        ? null
+        : item.applicationAmount - item.expenseAmount;
+    
       return {
         ...item,
         difference,
         isCorrect,
         status: isCorrect ? "passed" : "error",
-        message: isCorrect ? "正確" : "金額不符"
+        message: isCorrect
+          ? "正確"
+          : item.isTextComparison
+            ? "單位全銜不一致或資料缺漏"
+            : "金額不符"
       };
     });
 
