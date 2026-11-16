@@ -116,6 +116,13 @@
   .field input, .field select { width:100%; border:1px solid #d9dcd4; background:#fff; border-radius:8px; min-height:42px; padding:10px 12px; color:var(--text); outline:none; }
   .field input:focus, .field select:focus { border-color:#9a8175; box-shadow:0 0 0 3px rgba(95,62,54,.09); }
   .field input::placeholder { color:#aaa69f; }
+  /* 項目欄位：標籤列 + 「從項目清單選擇」勾選框 */
+  .item-field-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:7px; }
+  .item-field-header > label { margin-bottom:0; }
+  .field .item-list-toggle { display:inline-flex; align-items:center; gap:6px; margin-bottom:0; font-size:13px; font-weight:400; color:var(--muted); cursor:pointer; }
+  .modal .field .item-list-toggle input { width:auto; min-height:0; padding:0; margin:0; cursor:pointer; }
+  .field [hidden] { display:none !important; }
+
   .funding-layout { display:grid; grid-template-columns:minmax(220px,0.82fr) minmax(0,1.45fr); gap:18px; align-items:stretch; }
   .funding-primary { display:flex; flex-direction:column; gap:18px; }
   .funding-primary .field { padding:15px; border:1px solid var(--border); border-radius:10px; background:#fff; }
