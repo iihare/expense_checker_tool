@@ -315,8 +315,15 @@
       <div class="modal-body">
         <div class="field-grid">
           <div class="field full">
-            <label for="expenseItem">項目</label>
-            <select id="expenseItem" required>
+            <div class="item-field-header">
+              <label for="expenseItemText" id="expenseItemLabel">項目</label>
+              <label class="item-list-toggle" for="expenseItemFromList">
+                <input type="checkbox" id="expenseItemFromList">
+                <span>從項目清單選擇</span>
+              </label>
+            </div>
+            <input id="expenseItemText" type="text" autocomplete="off" placeholder="請輸入經費項目">
+            <select id="expenseItem" hidden>
               <option value="">請選擇經費項目</option>
               <option>場地費</option>
               <option>場地布置費</option>
