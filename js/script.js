@@ -412,6 +412,8 @@ function resetDemoData() {
     select.selectedIndex = 0;
   });
 
+  // 清空經費表基本資料
+  $("expenseUnitName").value = "";
   // 重設經費清單及相關狀態
   expenseRows.splice(0, expenseRows.length);
   nextId = 1;
