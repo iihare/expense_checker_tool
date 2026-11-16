@@ -16,6 +16,7 @@
     ["grantAmount", "grant"],
     ["agencyAmount", "agency"],
     ["expenseSelfFund", "self"],
+    ["expenseExpectedFee", "expectedFee"],
     ["expenseOther", "other"]
   ];
   const fmt = (value) => {
@@ -189,6 +190,7 @@ function formatFieldValue(field) {
       $("totalGrant").textContent = fmt(totals.ourGrant);
       $("totalAgency").textContent = fmt(totals.otherGrant);
       $("totalSelf").textContent = fmt(totals.selfFunded);
+      $("totalExpectedFee").textContent = fmt(totals.expectedFee);
       $("totalOther").textContent = fmt(totals.other);
 
       totalsElement.hidden = false;
@@ -265,6 +267,7 @@ function formatFieldValue(field) {
         grant: Number(row.grant) || 0,
         agency: Number(row.agency) || 0,
         self: Number(row.self) || 0,
+        expectedFee: Number(row.expectedFee) || 0,
         other: Number(row.other) || 0,
   
         // OCR 匯入專用資料
@@ -331,7 +334,14 @@ function formatFieldValue(field) {
     showToast(editingId ? "已更新經費資料" : "已加入經費清單");
   });
 
-  [...moneyFields.map(id => $(id)), $("unitName"), $("qualification"), $("leader"), $("registeredAddress"), $("mailingAddress")].forEach(field => {
+  [...moneyFields.map(id => $(id)),
+    $("unitName"),
+    $("expenseUnitName"),
+    $("qualification"),
+    $("leader"),
+    $("registeredAddress"),
+    $("mailingAddress")
+  ].forEach(field => {
     field.addEventListener("input", markEdited);
     field.addEventListener("change", markEdited);
   });
