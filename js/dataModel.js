@@ -37,6 +37,10 @@
       associationAddress: ""
     },
 
+    // 經費表基本資料
+    expenseData: {
+      unitName: ""
+    },
     // 經費清單
     // 每筆資料的欄位對應原本 script.js 的 expenseRows
     expenseItems: [],
@@ -79,6 +83,11 @@
       otherAmount: 0,
       associationName: "",
       associationAddress: ""
+    });
+
+    // 重設經費表基本資料
+    Object.assign(window.appState.expenseData, {
+      unitName: ""
     });
 
     // 清空經費資料，保留原陣列參照
