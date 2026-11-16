@@ -181,11 +181,12 @@
     if (!appState.expenseItemChecks) {
       appState.expenseItemChecks = {};
     }
-
+    
+    // 同時比對顯示文字與標準分類，OCR 原文用字不同時也不會漏提醒
     const expenseNames = items.map(item =>
-      String(item.item || "")
+      [item.item, item.standardItem].filter(Boolean).join(" ")
     );
-
+    
     const required = ITEM_RULES.filter(rule =>
       expenseNames.some(name => name.includes(rule.keyword))
     );
