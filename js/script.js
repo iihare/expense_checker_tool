@@ -316,6 +316,8 @@ function formatFieldValue(field) {
       return {
         id: nextId++,
         item: row.item || "",
+        standardItem: row.standardItem || "",
+        originalItem: row.originalItem || "",
         unitPrice: Number(row.unitPrice) || 0,
         quantity: Number(row.quantity) || 0,
         budget: Number(row.budget) || 0,
@@ -372,6 +374,10 @@ function formatFieldValue(field) {
       row[key] = numericValue($(fieldId).value);
     });
     row.item = item;
+    // 使用者修改了項目文字，舊的標準分類不再適用
+    if (existingRow && existingRow.standardItem && item !== existingRow.item) {
+      row.standardItem = "";
+    }
     //const editingId = Number($("expenseForm").dataset.editingId);
     if (editingId) {
       const index = expenseRows.findIndex(item => item.id === editingId);
