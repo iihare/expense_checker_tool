@@ -9,7 +9,6 @@
 
   const moneyFields = ["selfFund", "otherAgency", "expectedFee", "otherAmount", "guidelineGrant", "totalBudget"];
   const expenseFields = [
-    ["expenseItem", "item"],
     ["unitPrice", "unitPrice"],
     ["quantity", "quantity"],
     ["budgetAmount", "budget"],
@@ -70,6 +69,60 @@
     if (event.key === "Escape" && $("expenseModalBackdrop").classList.contains("open")) closeModal();
   });
 
+  // ===== 項目欄位：文字輸入 / 項目清單 切換 =====
+  const itemTextInput = $("expenseItemText");
+  const itemSelect = $("expenseItem");
+  const itemToggle = $("expenseItemFromList");
+
+  const isItemListMode = () => itemToggle.checked;
+  const activeItemField = () => (isItemListMode() ? itemSelect : itemTextInput);
+
+  // 只負責顯示／隱藏，不搬動資料
+  function syncItemMode() {
+    const useList = isItemListMode();
+    itemTextInput.hidden = useList;
+    itemSelect.hidden = !useList;
+    $("expenseItemLabel").htmlFor = useList ? "expenseItem" : "expenseItemText";
+  }
+
+  // 找出與文字完全相同的選項（選項沒有 value 屬性，value 即顯示文字）
+  function findItemOption(text) {
+    const target = String(text ?? "").trim();
+    if (!target) return null;
+    return Array.from(itemSelect.options)
+      .find(option => option.value && option.value.trim() === target) || null;
+  }
+
+  function getItemValue() {
+    return activeItemField().value.trim();
+  }
+
+  // 編輯時載入既有項目：一律用文字模式，確保 OCR 辨識出的任何文字都不會遺失
+  function loadItemForEdit(value) {
+    itemToggle.checked = false;
+    itemTextInput.value = String(value ?? "");
+    const match = findItemOption(itemTextInput.value);
+    itemSelect.value = match ? match.value : "";
+    syncItemMode();
+  }
+
+  itemToggle.addEventListener("change", () => {
+    if (isItemListMode()) {
+      // 文字 → 清單：有對應選項就選取；沒有則選單留空，原文字仍保留在文字框
+      const match = findItemOption(itemTextInput.value);
+      itemSelect.value = match ? match.value : "";
+    } else if (itemSelect.value) {
+      // 清單 → 文字：選單有選才覆蓋；沒選就保留文字框原內容
+      itemTextInput.value = itemSelect.value;
+    }
+    syncItemMode();
+    activeItemField().focus();
+  });
+
+  // form.reset() 不會觸發 change；reset 生效後再依勾選框狀態同步顯示
+  $("expenseForm").addEventListener("reset", () => setTimeout(syncItemMode, 0));
+  syncItemMode();
+  
   // 金額／數量欄位：即時加入千分位逗號，內部運算前再移除逗號。
   function rawNumericValue(value) {
     return String(value ?? "").replace(/,/g, "").replace(/[^\d.-]/g, "");
@@ -242,6 +295,7 @@ function formatFieldValue(field) {
       const row = expenseRows.find(item => item.id === Number(button.dataset.edit));
       if (!row) return;
       expenseFields.forEach(([fieldId, key]) => $(fieldId).value = row[key] ?? "");
+      loadItemForEdit(row.item);
       $("expenseForm").dataset.editingId = String(row.id);
       $("expenseModalTitle").textContent = "編輯經費";
       $("expenseForm").querySelector('[type="submit"]').textContent = "儲存修改";
@@ -300,9 +354,9 @@ function formatFieldValue(field) {
   }
   $("expenseForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    const item = $("expenseItem").value;
+    const item = getItemValue();
     if (!item) {
-      $("expenseItem").focus();
+      activeItemField().focus();
       return;
     }
     //const row = { id: Number($("expenseForm").dataset.editingId) || nextId++ };
@@ -315,9 +369,9 @@ function formatFieldValue(field) {
       ? { ...existingRow }
       : { id: nextId++ };
     expenseFields.forEach(([fieldId, key]) => {
-      const value = $(fieldId).value;
-      row[key] = key === "item" ? value : numericValue(value);
+      row[key] = numericValue($(fieldId).value);
     });
+    row.item = item;
     //const editingId = Number($("expenseForm").dataset.editingId);
     if (editingId) {
       const index = expenseRows.findIndex(item => item.id === editingId);
