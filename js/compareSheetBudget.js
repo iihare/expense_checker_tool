@@ -69,7 +69,7 @@
         name: "計畫總經費",
         applicationAmount: toNumber(application.totalBudget),
         expenseAmount: toNumber(totals.budget)
-      }
+      },
       // 預計收費
       {
         name: "預計收費",
