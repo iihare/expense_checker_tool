@@ -473,24 +473,31 @@
     const firstCandidate = Array.isArray(data.candidates)
       ? data.candidates[0]
       : null;
-
+  
     const parts = firstCandidate?.content?.parts;
-
+  
     const rawText = Array.isArray(parts)
       ? parts.find(part => typeof part.text === "string")?.text
       : null;
-
+  
     if (!rawText) {
       throw new Error("Gemini API 未回傳任何解析內容。");
     }
-
-    const aiRows = JSON.parse(rawText);
-
-    if (!Array.isArray(aiRows)) {
-      throw new Error("Gemini 回傳資料不是有效的陣列。");
+  
+    const result = JSON.parse(rawText);
+  
+    if (
+      !result ||
+      typeof result !== "object" ||
+      !Array.isArray(result.rows)
+    ) {
+      throw new Error("Gemini 回傳資料格式不正確。");
     }
-
-    return aiRows;
+  
+    return {
+      unitName: String(result.unitName ?? "").trim(),
+      rows: result.rows
+    };
   }
 
   function normalizeNumber(value) {
@@ -524,6 +531,7 @@
       const grant = normalizeNumber(row.grant);
       const agency = normalizeNumber(row.agency);
       const self = normalizeNumber(row.self);
+      const expectedFee = normalizeNumber(row.expectedFee);
       const other = normalizeNumber(row.other);
 
       const missingFields = [];
@@ -546,6 +554,7 @@
         grant,
         agency,
         self,
+        expectedFee,
         other,
 
         needsReview: missingFields.length > 0,
@@ -611,6 +620,9 @@
         "請完整提取文件中「補助經費明細表 / 經費概算表」的所有明細項目。",
         "請排除底部的「申請本要點補助金額合計」、「活動總經費」等總計列。",
         "若明細表跨越多頁，請合併提取所有頁面的明細。",
+        "請另外辨識文件中的「申請單位全銜」或「單位全銜」，放在 unitName。",
+        "每筆經費都必須辨識「預計收費」欄位，不得將它併入「其他」。",
+        "若預計收費欄位為空白，請回傳 null。",
         "注意事項：",
         "1. originalItem 請填寫表格中「經費項目」欄位的完整原始文字。",
         "2. item 請根據 originalItem 對應到最符合的標準項目清單。",
@@ -645,73 +657,93 @@
           responseMimeType: "application/json",
   
           responseSchema: {
-            type: "ARRAY",
-            description: "經費明細項目陣列",
-  
-            items: {
-              type: "OBJECT",
-  
-              properties: {
-                originalItem: {
-                  type: "STRING",
-                  description: "表格中的原始經費項目名稱"
-                },
-  
-                item: {
-                  type: "STRING",
-                  enum: STANDARD_ITEMS,
-                  description: "對應的標準經費項目分類"
-                },
-  
-                unitPrice: {
-                  type: "NUMBER",
-                  nullable: true,
-                  description: "單價"
-                },
-  
-                quantity: {
-                  type: "NUMBER",
-                  nullable: true,
-                  description: "數量"
-                },
-  
-                budget: {
-                  type: "NUMBER",
-                  nullable: true,
-                  description: "預算金額"
-                },
-  
-                grant: {
-                  type: "NUMBER",
-                  nullable: true,
-                  description: "申請本要點補助金額"
-                },
-  
-                agency: {
-                  type: "NUMBER",
-                  nullable: true,
-                  description: "他機關補助金額"
-                },
-  
-                self: {
-                  type: "NUMBER",
-                  nullable: true,
-                  description: "自籌款－自付經費"
-                },
-  
-                other: {
-                  type: "NUMBER",
-                  nullable: true,
-                  description: "自籌款－其他（民間贊助或收費）"
-                }
+            type: "OBJECT",
+            description: "經費概算表基本資料及經費明細",
+          
+            properties: {
+              unitName: {
+                type: "STRING",
+                description: "經費表上的申請單位全銜，找不到時回傳空字串"
               },
-  
-              required: [
-                "originalItem",
-                "item",
-                "budget"
-              ]
-            }
+          
+              rows: {
+                type: "ARRAY",
+                description: "經費明細項目陣列",
+          
+                items: {
+                  type: "OBJECT",
+          
+                  properties: {
+                    originalItem: {
+                      type: "STRING",
+                      description: "表格中的原始經費項目名稱"
+                    },
+          
+                    item: {
+                      type: "STRING",
+                      enum: STANDARD_ITEMS,
+                      description: "對應的標準經費項目分類"
+                    },
+          
+                    unitPrice: {
+                      type: "NUMBER",
+                      nullable: true,
+                      description: "單價"
+                    },
+          
+                    quantity: {
+                      type: "NUMBER",
+                      nullable: true,
+                      description: "數量"
+                    },
+          
+                    budget: {
+                      type: "NUMBER",
+                      nullable: true,
+                      description: "預算金額"
+                    },
+          
+                    grant: {
+                      type: "NUMBER",
+                      nullable: true,
+                      description: "申請本要點補助金額"
+                    },
+          
+                    agency: {
+                      type: "NUMBER",
+                      nullable: true,
+                      description: "他機關補助金額"
+                    },
+          
+                    self: {
+                      type: "NUMBER",
+                      nullable: true,
+                      description: "自籌款－自付經費"
+                    },
+          
+                    expectedFee: {
+                      type: "NUMBER",
+                      nullable: true,
+                      description: "預計收費金額"
+                    },
+          
+                    other: {
+                      type: "NUMBER",
+                      nullable: true,
+                      description: "其他金額，不包含預計收費"
+                    }
+                  },
+          
+                  required: [
+                    "originalItem",
+                    "item",
+                    "budget"
+                  ]
+                }
+              }
+            },
+          
+            required: ["unitName", "rows"]
           }
         }
       };
@@ -835,12 +867,24 @@
       }
   
       // 取得 AI 回傳資料。
-      const aiRows = parseGeminiResponse(data);
+      const aiResult = parseGeminiResponse(data);
+      const aiRows = aiResult.rows;
   
       const sourceFileNames = files
         .map(file => file.name)
         .join("、");
-  
+      
+      // 寫回經費表申請單位全銜
+      const expenseUnitNameInput = $("expenseUnitName");
+      
+      if (expenseUnitNameInput && aiResult.unitName) {
+        expenseUnitNameInput.value = aiResult.unitName;
+      
+        expenseUnitNameInput.dispatchEvent(
+          new Event("input", { bubbles: true })
+        );
+      }
+      
       // 轉換為原本 ExpenseOCRParser 相容的資料格式。
       const formattedRows = formatExpenseRows(
         aiRows,
