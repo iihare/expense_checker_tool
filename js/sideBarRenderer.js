@@ -294,11 +294,16 @@
       makeElement("h4", "", item.name || "申請書與經費表")
     );
 
-    const rows = [
-      ["申請書金額", item.applicationAmount],
-      ["經費表金額", item.expenseAmount],
-      ["差額（申請書－經費表）", item.difference]
-    ];
+    const rows = item.isTextComparison
+      ? [
+          ["申請書單位全銜", item.applicationAmount],
+          ["經費表申請單位全銜", item.expenseAmount]
+        ]
+      : [
+          ["申請書金額", item.applicationAmount],
+          ["經費表金額", item.expenseAmount],
+          ["差額（申請書－經費表）", item.difference]
+        ];
 
     rows.forEach(([label, value]) => {
       const row = makeElement("div", "comparison-row");
@@ -308,7 +313,11 @@
         makeElement(
           "strong",
           "",
-          value == null ? "—" : formatMoney(value)
+          value == null
+            ? "—"
+            : item.isTextComparison
+              ? (value || "未填寫")
+              : formatMoney(value)
         )
       );
 
