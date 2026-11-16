@@ -21,12 +21,20 @@
     grant: ["本要點", "要點補助"],
     agency: ["他機關"],
     self: ["自付經費", "自付"],
+    expectedFee: ["預計收費金額", "預計收費"],
     other: ["其他"]
   };
 
   // ── 表頭辨識設定（全部是「比例」或「字數」，沒有任何像素常數）──
   const HEADER_FIELD_ORDER = [
-    "unitPrice", "quantity", "budget", "grant", "agency", "self", "other"
+    "unitPrice",
+    "quantity",
+    "budget",
+    "grant",
+    "agency",
+    "self",
+    "expectedFee",
+    "other"
   ];
   const MIN_HEADER_FIELDS = 5;      // 至少辨識幾欄才接受
   const MAX_HEADER_LINES = 6;       // 同一欄表頭最多合併幾行
@@ -703,6 +711,7 @@
         grant: "",
         agency: "",
         self: "",
+        expectedFee: "",
         other: ""
       };
 
@@ -782,6 +791,7 @@
         grant: values.grant,
         agency: values.agency,
         self: values.self,
+        expectedFee: values.expectedFee,
         other: values.other,
 
         needsReview,
