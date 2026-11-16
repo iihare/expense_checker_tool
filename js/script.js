@@ -482,7 +482,7 @@ async function startCheck() {
     console.log("經費表檢查結果：", budgetResult);
 
     // 6. 比對申請書與經費表金額
-    const summaryResult = compareSummary();
+    const summaryResult = window.compareSummary();
     console.log("申請書與經費表交叉比對結果：", summaryResult);
 
     // 7. 更新檢查摘要側邊欄
