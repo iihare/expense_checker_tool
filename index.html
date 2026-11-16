@@ -148,6 +148,14 @@
 
         <div id="expensesPage" class="hidden">
           <section class="panel">
+            <div class="field expense-unit-field">
+              <label for="expenseUnitName">申請單位全銜</label>
+              <input
+                id="expenseUnitName"
+                type="text"
+                placeholder="請輸入申請單位全銜"
+              >
+            </div>
             <div class="expense-toolbar">
               <div>
                 <h3>經費清單</h3>
@@ -166,6 +174,7 @@
                     <th class="numeric">本要點補助金額</th>
                     <th class="numeric">他機關補助金額</th>
                     <th class="numeric">自付經費</th>
+                    <th class="numeric">預計收費</th>
                     <th class="numeric">其他</th>
                     <th id="expenseImportStatusHeader" hidden>匯入狀態</th>
                     <th>操作</th>
@@ -199,6 +208,10 @@
             <div>
               <span>自付經費</span>
               <strong id="totalSelf">0</strong>
+            </div>
+            <div>
+              <span>預計收費</span>
+              <strong id="totalExpectedFee">0</strong>
             </div>
             <div>
               <span>其他</span>
@@ -343,6 +356,16 @@
           <div class="field">
             <label for="expenseSelfFund">自付經費</label>
             <input id="expenseSelfFund" type="text" inputmode="decimal" autocomplete="off" placeholder="請輸入金額">
+          </div>
+          <div class="field">
+            <label for="expenseExpectedFee">預計收費</label>
+            <input
+              id="expenseExpectedFee"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="請輸入金額"
+            >
           </div>
           <div class="field">
             <label for="expenseOther">其他</label>
