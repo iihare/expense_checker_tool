@@ -210,6 +210,7 @@ function formatFieldValue(field) {
         <td class="numeric">${fmt(row.grant)}</td>
         <td class="numeric">${fmt(row.agency)}</td>
         <td class="numeric">${fmt(row.self)}</td>
+        <td class="numeric">${fmt(row.expectedFee)}</td>
         <td class="numeric">${fmt(row.other)}</td>
       
         ${hasOCRRows ? `
