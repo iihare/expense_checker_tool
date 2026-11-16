@@ -126,6 +126,7 @@
     window.appState.expenseItems = rows.map((row) => ({
       id: Number(row.id) || 0,
       item: String(row.item ?? ""),
+      standardItem: String(row.standardItem ?? ""),
       unitPrice: toNumberOrZero(row.unitPrice),
       quantity: toNumberOrZero(row.quantity),
       budget: toNumberOrZero(row.budget),
