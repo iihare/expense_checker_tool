@@ -119,6 +119,9 @@
     }
 
     const rows = window.getExpenseRows();
+    // 收集經費表基本資料
+    window.appState.expenseData.unitName =
+      getFieldValue("expenseUnitName");
 
     window.appState.expenseItems = rows.map((row) => ({
       id: Number(row.id) || 0,
@@ -129,6 +132,7 @@
       grant: toNumberOrZero(row.grant),
       agency: toNumberOrZero(row.agency),
       self: toNumberOrZero(row.self),
+      expectedFee: toNumberOrZero(row.expectedFee),
       other: toNumberOrZero(row.other)
     }));
 
