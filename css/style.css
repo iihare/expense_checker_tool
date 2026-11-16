@@ -110,6 +110,9 @@
   .field { min-width:0; }
   .field.full { grid-column:1 / -1; }
   .field label { display:block; font-size:13px; font-weight:700; margin-bottom:7px; }
+  /* 經費表申請單位全銜 */
+  .expense-unit-field { margin-bottom: 24px; }
+  .expense-unit-field label { font-size: 16px; }
   .field input, .field select { width:100%; border:1px solid #d9dcd4; background:#fff; border-radius:8px; min-height:42px; padding:10px 12px; color:var(--text); outline:none; }
   .field input:focus, .field select:focus { border-color:#9a8175; box-shadow:0 0 0 3px rgba(95,62,54,.09); }
   .field input::placeholder { color:#aaa69f; }
