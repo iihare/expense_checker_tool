@@ -946,90 +946,87 @@
 
   async function startOCR() {
     if (documentState.isProcessing) return;
-
+  
     const hasApplicationFiles =
       documentState.applicationFiles.length > 0;
-
+  
     const hasExpenseFiles =
       documentState.expenseFiles.length > 0;
-
+  
     if (!hasApplicationFiles && !hasExpenseFiles) {
       setImportFeedback("請先選擇要辨識的檔案。");
       return;
     }
-
-    // 只有選擇經費概算表時，才檢查及儲存 API Key。
+  
+    // 只有選擇經費概算表時，才檢查登入狀態。
     if (hasExpenseFiles) {
-      const apiKeyInput = $("geminiApiKeyInput");
-      const apiKey = apiKeyInput?.value.trim();
-
-      if (!apiKey) {
+      const token = sessionStorage.getItem("expenseToolToken");
+  
+      if (!token) {
         setImportFeedback(
-          "辨識經費概算表需要輸入 Gemini API Key。"
+          "辨識經費概算表前，請先輸入工具使用密碼並登入。"
         );
-
-        apiKeyInput?.focus();
+  
+        $("appPasswordInput")?.focus();
         return;
       }
-
-      localStorage.setItem("gemini_api_key", apiKey);
     }
-
+  
     documentState.isProcessing = true;
     updateImportControls();
-
+  
     let applicationSucceeded = false;
     let expenseSucceeded = false;
-
+  
     try {
       // 1. 申請書：純本地端 OCR。
       if (hasApplicationFiles) {
         try {
           applicationSucceeded =
             await processApplicationFiles();
-
+  
         } catch (error) {
           console.error("申請書處理失敗：", error);
-
+  
           setImportFeedback(
             "申請書處理時發生未預期的錯誤。"
           );
         }
       }
-
-      // 2. 經費表：Gemini API。
+  
+      // 2. 經費表：透過 Cloudflare Worker 呼叫 Gemini。
       if (hasExpenseFiles) {
         try {
           expenseSucceeded =
             await processExpenseFiles();
-
+  
         } catch (error) {
           console.error("經費表處理失敗：", error);
-
+  
           setImportFeedback(
             "經費表處理時發生未預期的錯誤。"
           );
         }
       }
-
+  
     } finally {
       documentState.isProcessing = false;
-
+  
       updateImportControls();
-
+  
       // 只有成功的檔案才清除。
       if (applicationSucceeded) {
         clearApplicationFiles();
       }
-
+  
       if (expenseSucceeded) {
         clearExpenseFiles();
       }
-
+  
       const hasRemainingFiles =
         documentState.applicationFiles.length > 0 ||
         documentState.expenseFiles.length > 0;
-
+  
       if (!hasRemainingFiles) {
         closeImportModal();
       }
