@@ -1085,39 +1085,38 @@
   // ---------- 8. 初始化 ----------
 
   function initialize() {
-    // 自動帶入上次儲存在瀏覽器的 API Key。
-    const savedKey = localStorage.getItem("gemini_api_key");
-
-    if (savedKey && $("geminiApiKeyInput")) {
-      $("geminiApiKeyInput").value = savedKey;
-    }
-
     // 按鈕事件。
     $("importFilesBtn")?.addEventListener(
       "click",
       openImportModal
     );
-
+  
     $("closeImportModalBtn")?.addEventListener(
       "click",
       closeImportModal
     );
-
+  
     $("cancelImportModalBtn")?.addEventListener(
       "click",
       closeImportModal
     );
-
+  
     $("clearImportFilesBtn")?.addEventListener(
       "click",
       clearAllFiles
     );
-
+  
     $("startOcrBtn")?.addEventListener(
       "click",
       startOCR
     );
-
+  
+    // 工具使用密碼登入。
+    $("appPasswordLoginBtn")?.addEventListener(
+      "click",
+      login
+    );
+  
     // 申請書檔案選取。
     $("applicationFilesInput")?.addEventListener(
       "change",
@@ -1126,11 +1125,11 @@
           "application",
           event.target.files || []
         );
-
+  
         event.target.value = "";
       }
     );
-
+  
     // 經費表檔案選取。
     $("expenseFilesInput")?.addEventListener(
       "change",
@@ -1139,21 +1138,11 @@
           "expense",
           event.target.files || []
         );
-
+  
         event.target.value = "";
       }
     );
-
-    // 點擊 Modal 外部關閉。
-    /*$("importModalBackdrop")?.addEventListener(
-      "click",
-      (event) => {
-        if (event.target === event.currentTarget) {
-          closeImportModal();
-        }
-      }
-    );*/
-
+  
     // ESC 關閉 Modal。
     document.addEventListener("keydown", (event) => {
       if (
@@ -1163,11 +1152,11 @@
         closeImportModal();
       }
     });
-
+  
     // 初始畫面。
     renderFileList("application");
     renderFileList("expense");
-
+  
     updateImportControls();
   }
 
