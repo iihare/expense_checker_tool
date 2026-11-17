@@ -83,24 +83,27 @@
   function updateImportControls() {
     const button = $("startOcrBtn");
     if (!button) return;
-
+  
     button.disabled =
       documentState.isProcessing ||
       (
         documentState.applicationFiles.length === 0 &&
         documentState.expenseFiles.length === 0
       );
-
+  
     button.textContent = documentState.isProcessing
       ? "辨識中……"
       : "開始辨識";
-
-    // 只有選取經費概算表時，才顯示 API Key 輸入框。
-    const apiKeyBox = $("geminiApiKeyBox");
-
-    if (apiKeyBox) {
-      apiKeyBox.style.display =
-        documentState.expenseFiles.length > 0 ? "block" : "none";
+  
+    // 只有選取經費概算表且尚未登入時，才顯示密碼輸入框。
+    const passwordBox = $("appPasswordBox");
+    const token = sessionStorage.getItem("expenseToolToken");
+  
+    if (passwordBox) {
+      passwordBox.style.display =
+        documentState.expenseFiles.length > 0 && !token
+          ? "block"
+          : "none";
     }
   }
 
