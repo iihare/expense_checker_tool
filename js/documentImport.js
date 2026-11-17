@@ -591,17 +591,7 @@
   
     if (files.length === 0) return false;
   
-    const apiKey =
-      $("geminiApiKeyInput")?.value.trim() ||
-      localStorage.getItem("gemini_api_key");
-  
-    if (!apiKey) {
-      setImportFeedback(
-        "請先輸入 Gemini API Key 再開始辨識經費表。"
-      );
-  
-      return false;
-    }
+    
   
     documentState.parsedExpenseDocuments = [];
     documentState.parsedExpenseRows = [];
@@ -765,8 +755,7 @@
       // 逐一嘗試主要模型與備援模型。
       for (const modelName of MODEL_FALLBACK_LIST) {
   
-        const url =
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+        const url = `${WORKER_API_URL}/api/gemini`;
   
         // 每個模型最多呼叫兩次（第一次 + 重試兩次）。
         const maxAttempts = 3;
@@ -781,15 +770,20 @@
             `正在呼叫 ${modelName}，第 ${attempt + 1} 次`
           );
   
+          const token = sessionStorage.getItem("expenseToolToken");
+
           const response = await fetch(url, {
             method: "POST",
-  
+          
             headers: {
               "Content-Type": "application/json",
-              "x-goog-api-key": apiKey
+              "Authorization": `Bearer ${token}`
             },
-  
-            body: JSON.stringify(requestBody)
+          
+            body: JSON.stringify({
+              model: modelName,
+              requestBody
+            })
           });
   
           const responseData = await response.json();
