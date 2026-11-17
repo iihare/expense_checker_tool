@@ -4,6 +4,8 @@
 
   const $ = (id) => document.getElementById(id);
 
+  const WORKER_API_URL = "https://expense-ocr-api.ihual0220.workers.dev";
+  
   const allowedExtensions = new Set(["pdf", "jpg", "jpeg", "png"]);
 
   const STANDARD_ITEMS = [
@@ -1082,7 +1084,103 @@
     }
   }
 
-  // ---------- 8. 初始化 ----------
+  // ---------- 8. API後端登入 ----------
+
+  async function login() {
+    const passwordInput = $("appPasswordInput");
+    const messageBox = $("appPasswordMessage");
+    const loginButton = $("appPasswordLoginBtn");
+  
+    if (!passwordInput) return;
+  
+    const password = passwordInput.value;
+  
+    // 確認有輸入密碼。
+    if (!password) {
+      if (messageBox) {
+        messageBox.textContent = "請先輸入工具使用密碼。";
+        messageBox.style.color = "#cc4125";
+      }
+  
+      passwordInput.focus();
+      return;
+    }
+  
+    // 避免重複點擊。
+    if (loginButton?.disabled) return;
+  
+    if (loginButton) {
+      loginButton.disabled = true;
+      loginButton.textContent = "登入中……";
+    }
+  
+    if (messageBox) {
+      messageBox.textContent = "";
+    }
+  
+    try {
+      // 呼叫 Cloudflare Worker 登入 API。
+      const response = await fetch(
+        `${WORKER_API_URL}/api/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            password: password
+          })
+        }
+      );
+  
+      const data = await response.json().catch(() => ({}));
+  
+      // 檢查登入結果。
+      if (!response.ok || !data.ok || !data.token) {
+        if (response.status === 401) {
+          throw new Error("密碼不正確，請重新輸入。");
+        }
+  
+        throw new Error(
+          data.error || "登入失敗，請稍後再試。"
+        );
+      }
+  
+      // 保存 Token，只存在目前分頁的 sessionStorage。
+      sessionStorage.setItem(
+        "expenseToolToken",
+        data.token
+      );
+  
+      // 清空密碼欄位。
+      passwordInput.value = "";
+  
+      // 更新畫面。
+      updateImportControls();
+  
+      setImportFeedback(
+        "登入成功！現在可以開始辨識經費概算表。"
+      );
+  
+    } catch (error) {
+      console.error("登入失敗：", error);
+  
+      if (messageBox) {
+        messageBox.textContent =
+          error.message || "登入時發生錯誤，請稍後再試。";
+  
+        messageBox.style.color = "#cc4125";
+      }
+  
+    } finally {
+      if (loginButton) {
+        loginButton.disabled = false;
+        loginButton.textContent = "登入";
+      }
+    }
+  }
+  
+  // ---------- 9. 初始化 ----------
 
   function initialize() {
     // 按鈕事件。
