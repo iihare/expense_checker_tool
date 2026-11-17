@@ -488,7 +488,24 @@
     if (!rawText) {
       throw new Error("Gemini API 未回傳任何解析內容。");
     }
-  
+    //暫時加入
+    console.log("Gemini 回傳文字長度：", rawText.length);
+
+    console.log(
+      "Gemini finishReason：",
+      firstCandidate?.finishReason
+    );
+    
+    console.log(
+      "Gemini 回傳是否以 } 結尾：",
+      rawText.trim().endsWith("}")
+    );
+    
+    console.log(
+      "Gemini 使用 Token 資訊：",
+      data.usageMetadata
+    );
+    //暫時加入結束
     const result = JSON.parse(rawText);
   
     if (
