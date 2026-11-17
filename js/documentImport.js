@@ -5,6 +5,7 @@
   const $ = (id) => document.getElementById(id);
 
   const WORKER_API_URL = "https://expense-ocr-api.ihual0220.workers.dev";
+  let isAuthenticated = false;
   
   const allowedExtensions = new Set(["pdf", "jpg", "jpeg", "png"]);
 
@@ -99,11 +100,10 @@
   
     // 只有選取經費概算表且尚未登入時，才顯示密碼輸入框。
     const passwordBox = $("appPasswordBox");
-    const token = sessionStorage.getItem("expenseToolToken");
-  
+
     if (passwordBox) {
       passwordBox.style.display =
-        documentState.expenseFiles.length > 0 && !token
+        documentState.expenseFiles.length > 0 && !isAuthenticated
           ? "block"
           : "none";
     }
@@ -1084,7 +1084,49 @@
     }
   }
 
-  // ---------- 8. API後端登入 ----------
+  // ---------- 8. Token過期檢查 ----------
+  async function checkLoginSession() {
+    const token = sessionStorage.getItem("expenseToolToken");
+  
+    // 沒有 Token，維持未登入狀態。
+    if (!token) {
+      isAuthenticated = false;
+      updateImportControls();
+      return;
+    }
+  
+    try {
+      const response = await fetch(
+        `${WORKER_API_URL}/api/session`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+  
+      const data = await response.json().catch(() => ({}));
+  
+      if (response.ok && data.ok) {
+        isAuthenticated = true;
+      } else {
+        // Token 無效或已過期。
+        sessionStorage.removeItem("expenseToolToken");
+        isAuthenticated = false;
+      }
+  
+    } catch (error) {
+      console.error("登入狀態確認失敗：", error);
+  
+      // 網路錯誤時不視為已登入，但保留 Token 供重新連線後使用。
+      isAuthenticated = false;
+    }
+  
+    updateImportControls();
+  }
+  
+  // ---------- 9. API後端登入 ----------
 
   async function login() {
     const passwordInput = $("appPasswordInput");
@@ -1152,9 +1194,12 @@
         data.token
       );
   
+      // 更新登入狀態。
+      isAuthenticated = true;
+
       // 清空密碼欄位。
       passwordInput.value = "";
-  
+      
       // 更新畫面。
       updateImportControls();
   
@@ -1180,7 +1225,7 @@
     }
   }
   
-  // ---------- 9. 初始化 ----------
+  // ---------- 10. 初始化 ----------
 
   function initialize() {
     // 按鈕事件。
@@ -1256,6 +1301,9 @@
     renderFileList("expense");
   
     updateImportControls();
+
+    // 確認目前分頁是否仍有有效的登入狀態。
+    checkLoginSession();
   }
 
   // ---------- 啟動 ----------
